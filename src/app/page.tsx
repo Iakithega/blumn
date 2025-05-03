@@ -1,24 +1,37 @@
+'use client'
+
+import { Card, Button, Row, Col, Typography } from 'antd'
+import { PlusOutlined, CalendarOutlined } from '@ant-design/icons'
+
+const { Title } = Typography
+
 export default function Home() {
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Welcome to Blumn</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-          <div className="space-y-4">
-            <button className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
-              Add Plant Care Entry
-            </button>
-            <button className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
-              View Today's Tasks
-            </button>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
-          <p className="text-gray-600">No recent activities to display.</p>
-        </div>
-      </div>
+    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <Title level={2}>Welcome to Blumn</Title>
+      
+      <Row gutter={[16, 16]}>
+        <Col xs={24} md={12}>
+          <Card title="Quick Actions">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <Button type="primary" icon={<PlusOutlined />} block>
+                Add Plant Care Entry
+              </Button>
+              <Button icon={<CalendarOutlined />} block>
+                View Today's Tasks
+              </Button>
+            </div>
+          </Card>
+        </Col>
+        
+        <Col xs={24} md={12}>
+          <Card title="Recent Activity">
+            <Typography.Text type="secondary">
+              No recent activities to display.
+            </Typography.Text>
+          </Card>
+        </Col>
+      </Row>
     </div>
   )
 } 
