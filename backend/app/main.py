@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 
 from .core.excel_handler import ExcelHandler
+from .models.plant import Plant
 
 # Initialize FastAPI app
 app = FastAPI(title="Blumn Plant Care Tracker")
@@ -32,5 +33,14 @@ async def get_plants():
     try:
         data = excel_handler.read_data()
         return {"status": "success", "data": data}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/plants/today", response_model=list[Plant])
+async def get_todays_plants():
+    """Get all plants with their current care status"""
+    try:
+        plants = excel_handler.get_todays_plants()
+        return plants
     except Exception as e:
         return {"status": "error", "message": str(e)} 
