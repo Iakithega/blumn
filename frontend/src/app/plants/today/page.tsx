@@ -21,6 +21,7 @@ const imageMap: Record<string, string> = {
   'calathea_medalion': 'calathea_medallion.jpeg',
   'calathea_orbifolia': 'calathea_orbifolia.png',
   'monstera_adenossii': 'monstera_adansonii.jpg',
+  'ficus_elastica_abidjan': 'ficus_abidjan.jpg',
 };
 
 function getImageSrc(plantName: string) {
