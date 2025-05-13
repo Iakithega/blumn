@@ -31,7 +31,7 @@ class ExcelHandler:
         return sorted(list(plant_names))
     
     def _ensure_dates_exist(self, ws):
-        """Ensure entries exist for today and next 7 days"""
+        """Ensure entries exist for today and next 7 days, with empty row separators between date groups"""
         today = datetime.now().date()
         end_date = today + timedelta(days=7)
         
@@ -48,9 +48,10 @@ class ExcelHandler:
         # Get plant names
         plant_names = self._get_plant_names(ws)
         
-        # Add missing dates
+        # Add missing dates and ensure empty row after each date group
         current_date = today
         while current_date <= end_date:
+            date_rows_added = False
             if current_date not in existing_dates:
                 # Add entries for each plant
                 for plant in plant_names:
@@ -63,6 +64,10 @@ class ExcelHandler:
                         "",  # wash
                         ""   # size
                     ])
+                date_rows_added = True
+            # Always add an empty row after each date group (if any rows were added for this date)
+            if date_rows_added:
+                ws.append([None] * ws.max_column)
             current_date += timedelta(days=1)
     
     def _get_last_care_date(self, ws, plant_name: str, care_type: str) -> datetime:
