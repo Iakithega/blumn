@@ -23,12 +23,12 @@ class ExcelHandler:
             wb.save(self.file_path)
     
     def _get_plant_names(self, ws) -> List[str]:
-        """Get unique plant names from the Excel file"""
-        plant_names = set()
+        """Get unique plant names from the Excel file, preserving original order"""
+        plant_names = []
         for row in ws.iter_rows(min_row=2, values_only=True):
-            if row[1]:  # plant name column
-                plant_names.add(row[1])
-        return sorted(list(plant_names))
+            if row[1] and row[1] not in plant_names:  # plant name column
+                plant_names.append(row[1])
+        return plant_names
     
     def _ensure_dates_exist(self, ws):
         """Ensure entries exist for today and next 7 days, with empty row separators between date groups"""
@@ -37,26 +37,48 @@ class ExcelHandler:
         
         # Get existing dates
         existing_dates = set()
-        for row in ws.iter_rows(min_row=2, max_col=1, values_only=True):
+        last_date = None
+        last_date_rows = []
+        all_rows = []
+        
+        # Store row indices for each date
+        date_to_rows = {}
+        
+        # First pass - collect date info
+        for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
+            all_rows.append((row_idx, row))
+            
+            if not any(row):  # Empty row
+                continue
+                
             if row[0]:
                 try:
                     date = parse(row[0]).date()
                     existing_dates.add(date)
+                    
+                    if date != last_date:
+                        last_date = date
+                        last_date_rows = []
+                        
+                    last_date_rows.append(row_idx)
+                    
+                    if date not in date_to_rows:
+                        date_to_rows[date] = []
+                    date_to_rows[date].append(row_idx)
                 except:
-                    continue
+                    pass
         
         # Get plant names
         plant_names = self._get_plant_names(ws)
         
-        # Add missing dates and ensure empty row after each date group
+        # Add missing dates
         current_date = today
         while current_date <= end_date:
-            date_rows_added = False
             if current_date not in existing_dates:
-                # Add entries for each plant
+                # This date doesn't exist - add it with all plants
                 for plant in plant_names:
                     ws.append([
-                        current_date.strftime("%m/%d/%Y"),
+                        current_date.strftime("%d.%m.%Y"),
                         plant,
                         "",  # days without water
                         "",  # water
@@ -64,10 +86,9 @@ class ExcelHandler:
                         "",  # wash
                         ""   # size
                     ])
-                date_rows_added = True
-            # Always add an empty row after each date group (if any rows were added for this date)
-            if date_rows_added:
+                # Add separator
                 ws.append([None] * ws.max_column)
+            
             current_date += timedelta(days=1)
     
     def _get_last_care_date(self, ws, plant_name: str, care_type: str) -> datetime:

@@ -70,9 +70,6 @@ yarn-error.log*
 *.swp
 *.swo
 
-# Excel files
-*.xlsx
-*.xls
-*.csv
+
 
 
