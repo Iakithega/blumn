@@ -35,47 +35,47 @@ class ExcelHandler:
         today = datetime.now().date()
         end_date = today + timedelta(days=7)
         
-        # Get existing dates
+        # Step 1: Collect all date information and find last rows
         existing_dates = set()
-        last_date = None
-        last_date_rows = []
-        all_rows = []
+        date_to_rows = {}  # Maps each date to all its row indices
         
-        # Store row indices for each date
-        date_to_rows = {}
-        
-        # First pass - collect date info
+        # Go through all rows to collect date information
         for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), 2):
-            all_rows.append((row_idx, row))
-            
-            if not any(row):  # Empty row
+            if not row[0]:  # Skip rows without a date
                 continue
                 
-            if row[0]:
-                try:
-                    date = parse(row[0]).date()
-                    existing_dates.add(date)
-                    
-                    if date != last_date:
-                        last_date = date
-                        last_date_rows = []
-                        
-                    last_date_rows.append(row_idx)
-                    
-                    if date not in date_to_rows:
-                        date_to_rows[date] = []
-                    date_to_rows[date].append(row_idx)
-                except:
-                    pass
+            try:
+                date = parse(row[0]).date() if isinstance(row[0], str) else row[0].date()
+                existing_dates.add(date)
+                
+                if date not in date_to_rows:
+                    date_to_rows[date] = []
+                date_to_rows[date].append(row_idx)
+            except:
+                pass
+        
+        # Step 2: Process each date to ensure it has a separator after its last plant
+        for date, row_indices in date_to_rows.items():
+            last_row_idx = max(row_indices)  # Last row for this date
+            
+            # Check if we need to add a separator after this date
+            if last_row_idx + 1 <= ws.max_row:
+                next_row = [ws.cell(row=last_row_idx + 1, column=col).value for col in range(1, ws.max_column + 1)]
+                if any(next_row):  # Next row has content (not empty)
+                    # Insert empty row as separator
+                    ws.insert_rows(last_row_idx + 1)
+            else:
+                # At end of sheet, add separator
+                ws.append([None] * ws.max_column)
         
         # Get plant names
         plant_names = self._get_plant_names(ws)
         
-        # Add missing dates
+        # Step 3: Add missing dates
         current_date = today
         while current_date <= end_date:
             if current_date not in existing_dates:
-                # This date doesn't exist - add it with all plants
+                # Add entries for each plant
                 for plant in plant_names:
                     ws.append([
                         current_date.strftime("%d.%m.%Y"),
@@ -86,7 +86,7 @@ class ExcelHandler:
                         "",  # wash
                         ""   # size
                     ])
-                # Add separator
+                # Add separator row
                 ws.append([None] * ws.max_column)
             
             current_date += timedelta(days=1)
