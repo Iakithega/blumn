@@ -17,8 +17,8 @@ export default function Home() {
               <Button type="primary" icon={<PlusOutlined />} block>
                 Add Plant Care Entry
               </Button>
-              <Button icon={<CalendarOutlined />} block>
-                View Today's Tasks
+              <Button icon={<CalendarOutlined />} href="/plants/overview" block>
+                Plant Overview
               </Button>
             </div>
           </Card>

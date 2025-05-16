@@ -29,6 +29,14 @@ export default function PlantsPage() {
       const data = await response.json()
       
       if (data.status === 'success') {
+        // Ensure data.data is an array before proceeding
+        if (!Array.isArray(data.data)) {
+          console.error('Expected array but got:', data.data);
+          message.error('Received invalid data format from server');
+          setPlants([]);
+          return;
+        }
+        
         // Transform the data to match our interface
         const transformedData = data.data.map((plant: any, index: number) => ({
           key: index.toString(),

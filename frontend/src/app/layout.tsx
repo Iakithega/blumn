@@ -25,6 +25,11 @@ export default function RootLayout({
       label: 'Plants',
     },
     {
+      key: '/plants/overview',
+      icon: <ExperimentOutlined />,
+      label: 'Plant Overview',
+    },
+    {
       key: '/care-history',
       icon: <HistoryOutlined />,
       label: 'Care History',
@@ -45,6 +50,7 @@ export default function RootLayout({
                   <nav>
                     <a href="/" style={{ marginRight: '20px' }}>Home</a>
                     <a href="/plants" style={{ marginRight: '20px' }}>Plants</a>
+                    <a href="/plants/overview" style={{ marginRight: '20px' }}>Plant Overview</a>
                     <a href="/care-history">Care History</a>
                   </nav>
                 </div>
