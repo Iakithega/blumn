@@ -15,42 +15,142 @@ interface Plant {
   fertilizing_schedule: number;
 }
 
-// Helper function to create a dummy watering history (since the real data would come from the API)
-function generateWateringHistory(daysAgo: number | null, schedule: number): boolean[] {
-  const days = 30; // Show last 30 days
-  const history: boolean[] = Array(days).fill(false);
+// Additional interface for watering history data
+interface WateringHistoryData {
+  plant_name: string;
+  watering_dates: string[]; // Array of dates when the plant was watered
+}
+
+// Helper function to create a realistic watering history from actual data including future predictions
+function generateWateringHistory(plantName: string, wateringHistory: WateringHistoryData[], daysAgo: number | null, periodicity: number): {history: boolean[], today: number, nextWatering: number} {
+  const pastDays = 30; // Show last 30 days
+  const futureDays = 10; // Show next 10 days
+  const totalDays = pastDays + futureDays;
+  const history: boolean[] = Array(totalDays).fill(false);
   
-  if (daysAgo === null || daysAgo > days) return history;
+  // Find watering history for this specific plant
+  const plantHistory = wateringHistory.find(h => h.plant_name === plantName);
   
-  // Mark the last watering day
-  history[days - 1 - daysAgo] = true;
+  // Calculate today's position in the array
+  const todayIndex = pastDays - 1;
   
-  // Mark previous watering days based on schedule
-  for (let i = days - 1 - daysAgo; i >= 0; i -= schedule) {
-    if (i >= 0) history[i] = true;
+  // Default value for next watering (if we can't calculate it)
+  let nextWateringIndex = -1;
+  
+  if (!plantHistory) return { history, today: todayIndex, nextWatering: nextWateringIndex };
+
+  // Get today's date
+  const today = new Date();
+  
+  // Convert watering dates to Date objects
+  const wateringDates = plantHistory.watering_dates.map(dateStr => {
+    const parts = dateStr.split('.');
+    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+  });
+  
+  // Sort dates in ascending order
+  wateringDates.sort((a, b) => a.getTime() - b.getTime());
+  
+  // Mark watering days in the past
+  for (let i = 0; i < pastDays; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (pastDays - 1 - i)); // date for this position in history
+    
+    // Check if this date matches any watering date
+    const watered = wateringDates.some(waterDate => 
+      waterDate.getDate() === date.getDate() && 
+      waterDate.getMonth() === date.getMonth() && 
+      waterDate.getFullYear() === date.getFullYear()
+    );
+    
+    if (watered) {
+      history[i] = true;
+    }
   }
   
-  return history;
+  // Calculate next watering date based on periodicity and most recent watering
+  if (wateringDates.length > 0 && periodicity > 0) {
+    // Get the most recent watering date
+    const lastWatering = wateringDates[wateringDates.length - 1];
+    
+    // Calculate days since last watering
+    const daysSinceLastWatering = Math.floor((today.getTime() - lastWatering.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Calculate days until next watering
+    const daysUntilNextWatering = periodicity - (daysSinceLastWatering % periodicity);
+    
+    // If next watering is within our future window, mark it
+    if (daysUntilNextWatering <= futureDays) {
+      nextWateringIndex = todayIndex + daysUntilNextWatering;
+    }
+  }
+  
+  return { history, today: todayIndex, nextWatering: nextWateringIndex };
 }
 
 // Component for rendering watering history visualization
-function WateringHistory({ history }: { history: boolean[] }) {
+function WateringHistory({ history, today, nextWatering }: { history: boolean[], today: number, nextWatering: number }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '32px', width: '100%' }}>
-      {history.map((watered, i) => (
-        <Tooltip key={i} title={`${30 - i} days ago: ${watered ? 'Watered' : 'Not watered'}`}>
-          <div
-            style={{
-              width: '100%',
-              height: '32px',
-              backgroundColor: watered ? '#52c41a' : '#f0f0f0',
-              borderRadius: '3px',
-              flexGrow: 1,
-              flexBasis: 0,
-            }}
-          />
-        </Tooltip>
-      ))}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '50px', width: '100%' }}>
+      {history.map((watered, i) => {
+        let style = {
+          width: '100%',
+          height: '50px',
+          backgroundColor: watered ? '#52c41a' : '#f0f0f0',
+          borderRadius: '3px',
+          flexGrow: 1,
+          flexBasis: 0,
+          border: 'none'
+        };
+        
+        // Today's marker (black/gray outline)
+        if (i === today) {
+          style = {
+            ...style,
+            border: '2px solid #333',
+            backgroundColor: '#f0f0f0'
+          };
+        }
+        
+        // Next watering marker (green outline)
+        if (i === nextWatering) {
+          style = {
+            ...style,
+            border: '2px solid #52c41a',
+            backgroundColor: '#f0f0f0'
+          };
+        }
+        
+        // Watering in the past
+        if (watered) {
+          style = {
+            ...style,
+            backgroundColor: '#52c41a',
+            border: 'none'
+          };
+        }
+        
+        // Calculate the date for this position
+        const totalDays = history.length;
+        const pastDays = today + 1;
+        const daysFromToday = i - today;
+        
+        let tooltipDate = new Date();
+        tooltipDate.setDate(tooltipDate.getDate() + daysFromToday);
+        const tooltipText = i < today ? 
+          `${Math.abs(daysFromToday)} days ago: ${watered ? 'Watered' : 'Not watered'}` : 
+          i === today ? 
+            'Today' : 
+            i === nextWatering ? 
+              `${daysFromToday} days from now: Next watering` : 
+              `${daysFromToday} days from now`;
+        
+        return (
+          <Tooltip key={i} title={tooltipText}>
+            <div style={style} />
+          </Tooltip>
+        );
+      })}
     </div>
   );
 }
@@ -95,8 +195,11 @@ function formatDaysAgo(days: number | null): string {
 export default function PlantOverview() {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [periodicities, setPeriodicities] = useState<Record<string, number>>({});
+  const [wateringHistory, setWateringHistory] = useState<WateringHistoryData[]>([]);
 
   useEffect(() => {
+    // Fetch plants data
     fetch('http://127.0.0.1:8000/api/plants/today')
       .then(res => res.json())
       .then(data => {
@@ -109,11 +212,80 @@ export default function PlantOverview() {
         setPlants(enhancedData);
         setLoading(false);
       });
+    
+    // Fetch watering periodicity data
+    fetch('http://127.0.0.1:8000/api/plants/periodicity')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          // Create a mapping of plant name to calculated periodicity
+          const periodicityMap: Record<string, number> = {};
+          data.data.forEach((item: any) => {
+            if (item.calculated_periodicity !== null) {
+              periodicityMap[item.plant_name] = item.calculated_periodicity;
+            }
+          });
+          setPeriodicities(periodicityMap);
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching periodicity data:", error);
+      });
+
+    // Fetch raw plant data to extract watering history
+    fetch('http://127.0.0.1:8000/api/plants')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          // Process the data to extract watering dates for each plant
+          const plantWateringMap: Record<string, string[]> = {};
+          
+          data.data.forEach((entry: any) => {
+            const plantName = entry['plant name'];
+            const date = entry.date;
+            const daysWithoutWater = entry['days without water'];
+            const waterEntry = entry.water;
+            
+            // Check if this row indicates a watering event
+            const isWateringEvent = 
+              daysWithoutWater === 0 || 
+              (typeof daysWithoutWater === 'string' && daysWithoutWater.trim() === '0') || 
+              waterEntry;
+              
+            if (plantName && date && isWateringEvent) {
+              if (!plantWateringMap[plantName]) {
+                plantWateringMap[plantName] = [];
+              }
+              plantWateringMap[plantName].push(date);
+            }
+          });
+          
+          // Convert to array format for state
+          const wateringHistoryData = Object.entries(plantWateringMap).map(([plant_name, watering_dates]) => ({
+            plant_name,
+            watering_dates
+          }));
+          
+          setWateringHistory(wateringHistoryData);
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching plant data for history:", error);
+      });
   }, []);
 
   // Custom render function for each plant card
   const renderPlantCard = (plant: Plant) => {
-    const history = generateWateringHistory(plant.days_since_watering, plant.watering_schedule);
+    // Get the calculated periodicity or fall back to the default watering schedule
+    const periodicity = periodicities[plant.name] || plant.watering_schedule;
+    
+    // Get watering history with today and next watering indicators
+    const { history, today, nextWatering } = generateWateringHistory(
+      plant.name, 
+      wateringHistory, 
+      plant.days_since_watering,
+      periodicity
+    );
     
     return (
       <Card 
@@ -121,6 +293,7 @@ export default function PlantOverview() {
         style={{ marginBottom: 24 }}
         bodyStyle={{ padding: 20 }}
       >
+        {/* Top section - Plant Info */}
         <Row gutter={[16, 16]} align="top">
           {/* Left column - Plant Image */}
           <Col xs={24} sm={6} md={4} style={{ textAlign: 'center' }}>
@@ -153,26 +326,42 @@ export default function PlantOverview() {
                 </Col>
               </Row>
             </div>
-            
-            <Divider style={{ margin: '16px 0' }} />
-            
-            {/* Watering History */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                <Text strong style={{ fontSize: 16 }}>Watering History (Last 30 Days)</Text>
-                <Text type="secondary">Recommended: Every {plant.watering_schedule} days</Text>
-              </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', margin: '0 -16px' }}>
-                <Text type="secondary" style={{ width: '40px', textAlign: 'center' }}>30d ago</Text>
-                <div style={{ flex: 1, padding: '0 12px' }}>
-                  <WateringHistory history={history} />
-                </div>
-                <Text type="secondary" style={{ width: '40px', textAlign: 'center' }}>Today</Text>
-              </div>
-            </div>
           </Col>
         </Row>
+          
+        <Divider style={{ margin: '16px 0' }} />
+        
+        {/* Bottom section - Full Width Watering History */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Text strong style={{ fontSize: 16 }}>Watering History & Forecast</Text>
+            <Text type="secondary">Watering Cycle: {periodicity} days</Text>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Text type="secondary" style={{ width: '50px', textAlign: 'center' }}>30d ago</Text>
+            <div style={{ flex: 1, padding: '0 12px' }}>
+              <WateringHistory history={history} today={today} nextWatering={nextWatering} />
+            </div>
+            <Text type="secondary" style={{ width: '50px', textAlign: 'center' }}>+10d</Text>
+          </div>
+          
+          {/* Legend */}
+          <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 16, height: 16, backgroundColor: '#52c41a', borderRadius: 2 }}></div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Past Watering</Text>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 16, height: 16, border: '2px solid #333', borderRadius: 2 }}></div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Today</Text>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 16, height: 16, border: '2px solid #52c41a', borderRadius: 2 }}></div>
+              <Text type="secondary" style={{ fontSize: 12 }}>Next Watering</Text>
+            </div>
+          </div>
+        </div>
       </Card>
     );
   };
