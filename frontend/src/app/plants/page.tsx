@@ -100,6 +100,24 @@ export default function PlantsPage() {
     },
   ]
 
+  // Create a function to apply alternating row colors based on date
+  const rowClassName = (record: Plant, index: number): string => {
+    // Track the date groups to apply different colors
+    if (index === 0) return 'even-date-row';
+    
+    // If the date is different from the previous row, change the color group
+    const prevRecord = plants[index - 1];
+    if (prevRecord && prevRecord.date !== record.date) {
+      // Get the previous row's class
+      const prevClass: string = rowClassName(prevRecord, index - 1);
+      // Return the opposite class
+      return prevClass === 'even-date-row' ? 'odd-date-row' : 'even-date-row';
+    }
+    
+    // If same date as previous row, use the same color
+    return rowClassName(plants[index - 1], index - 1);
+  };
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <Card
@@ -110,11 +128,24 @@ export default function PlantsPage() {
           </Button>
         }
       >
+        <style jsx global>{`
+          .even-date-row {
+            background-color: #ffffff;
+          }
+          .odd-date-row {
+            background-color: #f5f5f5;
+          }
+          .ant-table-tbody > tr.even-date-row:hover > td,
+          .ant-table-tbody > tr.odd-date-row:hover > td {
+            background-color: #e6f7ff !important;
+          }
+        `}</style>
         <Table
           columns={columns}
           dataSource={plants}
           pagination={false}
           loading={loading}
+          rowClassName={rowClassName}
         />
       </Card>
     </div>

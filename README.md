@@ -4,6 +4,7 @@ python -m uvicorn app.main:app --reload
 
 # to start the frontend (dev server) Port 3000 (http://localhost:3000):
 Make sure you're in the root directory (where package.json is)
+cd frontend
 npm run dev
 
 
