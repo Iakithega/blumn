@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, CSSProperties } from 'react';
 import { Table, Card, Row, Col, Typography, Tooltip, Divider } from 'antd';
 
 const { Title, Text } = Typography;
@@ -22,11 +22,12 @@ interface WateringHistoryData {
 }
 
 // Helper function to create a realistic watering history from actual data including future predictions
-function generateWateringHistory(plantName: string, wateringHistory: WateringHistoryData[], daysAgo: number | null, periodicity: number): {history: boolean[], today: number, nextWatering: number} {
+function generateWateringHistory(plantName: string, wateringHistory: WateringHistoryData[], daysAgo: number | null, periodicity: number): {history: boolean[], today: number, nextWatering: number, weekdays: string[]} {
   const pastDays = 30; // Show last 30 days
   const futureDays = 10; // Show next 10 days
   const totalDays = pastDays + futureDays;
   const history: boolean[] = Array(totalDays).fill(false);
+  const weekdays: string[] = Array(totalDays).fill('');
   
   // Find watering history for this specific plant
   const plantHistory = wateringHistory.find(h => h.plant_name === plantName);
@@ -37,11 +38,21 @@ function generateWateringHistory(plantName: string, wateringHistory: WateringHis
   // Default value for next watering (if we can't calculate it)
   let nextWateringIndex = -1;
   
-  if (!plantHistory) return { history, today: todayIndex, nextWatering: nextWateringIndex };
-
   // Get today's date
   const today = new Date();
   
+  // Fill in weekdays array
+  for (let i = 0; i < totalDays; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (pastDays - 1 - i)); // date for this position
+    
+    // Get single-letter weekday (M, T, W, T, F, S, S)
+    const weekdayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    weekdays[i] = weekdayLetters[date.getDay()];
+  }
+  
+  if (!plantHistory) return { history, today: todayIndex, nextWatering: nextWateringIndex, weekdays };
+
   // Convert watering dates to Date objects
   const wateringDates = plantHistory.watering_dates.map(dateStr => {
     const parts = dateStr.split('.');
@@ -85,72 +96,128 @@ function generateWateringHistory(plantName: string, wateringHistory: WateringHis
     }
   }
   
-  return { history, today: todayIndex, nextWatering: nextWateringIndex };
+  return { history, today: todayIndex, nextWatering: nextWateringIndex, weekdays };
 }
 
 // Component for rendering watering history visualization
-function WateringHistory({ history, today, nextWatering }: { history: boolean[], today: number, nextWatering: number }) {
+function WateringHistory({ history, today, nextWatering, weekdays }: { 
+  history: boolean[], 
+  today: number, 
+  nextWatering: number,
+  weekdays: string[]
+}) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '50px', width: '100%' }}>
-      {history.map((watered, i) => {
-        let style = {
-          width: '100%',
-          height: '50px',
-          backgroundColor: watered ? '#52c41a' : '#f0f0f0',
-          borderRadius: '3px',
-          flexGrow: 1,
-          flexBasis: 0,
-          border: 'none'
-        };
-        
-        // Today's marker (black/gray outline)
-        if (i === today) {
-          style = {
-            ...style,
-            border: '2px solid #333',
-            backgroundColor: '#f0f0f0'
+    <div>
+      {/* Main timeline */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '50px', width: '100%' }}>
+        {history.map((watered, i) => {
+          // Determine if this is past, today, or future
+          const isPast = i < today;
+          const isToday = i === today;
+          const isFuture = i > today;
+          
+          let style: CSSProperties = {
+            width: '100%',
+            height: '50px',
+            backgroundColor: watered ? '#52c41a' : '#f0f0f0',
+            borderRadius: isPast ? '3px' : '6px', // More rounded corners for future items
+            flexGrow: 1,
+            flexBasis: 0,
+            border: 'none',
+            position: 'relative'
           };
-        }
-        
-        // Next watering marker (green outline)
-        if (i === nextWatering) {
-          style = {
-            ...style,
-            border: '2px solid #52c41a',
-            backgroundColor: '#f0f0f0'
-          };
-        }
-        
-        // Watering in the past
-        if (watered) {
-          style = {
-            ...style,
-            backgroundColor: '#52c41a',
-            border: 'none'
-          };
-        }
-        
-        // Calculate the date for this position
-        const totalDays = history.length;
-        const pastDays = today + 1;
-        const daysFromToday = i - today;
-        
-        let tooltipDate = new Date();
-        tooltipDate.setDate(tooltipDate.getDate() + daysFromToday);
-        const tooltipText = i < today ? 
-          `${Math.abs(daysFromToday)} days ago: ${watered ? 'Watered' : 'Not watered'}` : 
-          i === today ? 
-            'Today' : 
-            i === nextWatering ? 
-              `${daysFromToday} days from now: Next watering` : 
-              `${daysFromToday} days from now`;
-        
-        return (
-          <Tooltip key={i} title={tooltipText}>
-            <div style={style} />
-          </Tooltip>
-        );
-      })}
+          
+          // Today's marker (black/gray outline)
+          if (isToday) {
+            style = {
+              ...style,
+              border: '2px solid #333',
+              backgroundColor: '#f0f0f0'
+            };
+          }
+          
+          // Next watering marker (green outline with different style for forecast)
+          if (i === nextWatering) {
+            style = {
+              ...style,
+              border: '2px solid #52c41a',
+              backgroundColor: '#f0f0f0',
+              borderStyle: 'dashed', // Dashed border for forecast
+            };
+          }
+          
+          // Watering in the past
+          if (watered) {
+            style = {
+              ...style,
+              backgroundColor: '#52c41a',
+              border: 'none'
+            };
+          }
+          
+          // Style adjustments for future items (forecast)
+          if (isFuture) {
+            style = {
+              ...style,
+              backgroundColor: style.backgroundColor === '#52c41a' ? '#7dda4d' : style.backgroundColor, // Lighter green for future
+              backgroundImage: style.backgroundColor === '#f0f0f0' ? 'linear-gradient(45deg, #f0f0f0 25%, #e8e8e8 25%, #e8e8e8 50%, #f0f0f0 50%, #f0f0f0 75%, #e8e8e8 75%, #e8e8e8 100%)' : 'none',
+              backgroundSize: '8px 8px', // Subtle pattern for future items
+            };
+          }
+          
+          // Calculate the date for this position
+          const totalDays = history.length;
+          const pastDays = today + 1;
+          const daysFromToday = i - today;
+          
+          // Get date for this position to add to tooltip
+          let date = new Date();
+          date.setDate(date.getDate() + daysFromToday);
+          const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const weekday = weekdayNames[date.getDay()];
+          
+          const tooltipText = i < today ? 
+            `${weekday}, ${Math.abs(daysFromToday)} days ago: ${watered ? 'Watered' : 'Not watered'}` : 
+            i === today ? 
+              `Today (${weekday})` : 
+              i === nextWatering ? 
+                `${weekday}, ${daysFromToday} days from now: Next watering` : 
+                `${weekday}, ${daysFromToday} days from now`;
+          
+          return (
+            <Tooltip key={i} title={tooltipText}>
+              <div style={style} />
+            </Tooltip>
+          );
+        })}
+      </div>
+      
+      {/* Weekday indicators below - one for each day */}
+      <div style={{ display: 'flex', alignItems: 'center', marginTop: '2px', gap: '3px', height: '16px' }}>
+        {weekdays.map((day, i) => {
+          // Determine if it's a weekend (S) or today
+          const isWeekend = day === 'S';
+          const isToday = i === today;
+          
+          return (
+            <div 
+              key={i}
+              style={{ 
+                flexGrow: 1,
+                flexBasis: 0,
+                textAlign: 'center',
+                fontSize: '9px',
+                fontWeight: isWeekend ? 'bold' : 'normal',
+                color: isWeekend ? '#666' : '#aaa', // Darker color for weekends
+                backgroundColor: isToday ? '#f0f0f099' : 'transparent',
+                borderRadius: '3px'
+              }}
+            >
+              {day}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -280,7 +347,7 @@ export default function PlantOverview() {
     const periodicity = periodicities[plant.name] || plant.watering_schedule;
     
     // Get watering history with today and next watering indicators
-    const { history, today, nextWatering } = generateWateringHistory(
+    const { history, today, nextWatering, weekdays } = generateWateringHistory(
       plant.name, 
       wateringHistory, 
       plant.days_since_watering,
@@ -339,11 +406,14 @@ export default function PlantOverview() {
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Text type="secondary" style={{ width: '50px', textAlign: 'center' }}>30d ago</Text>
             <div style={{ flex: 1, padding: '0 12px' }}>
-              <WateringHistory history={history} today={today} nextWatering={nextWatering} />
+              <WateringHistory 
+                history={history} 
+                today={today} 
+                nextWatering={nextWatering} 
+                weekdays={weekdays}
+              />
             </div>
-            <Text type="secondary" style={{ width: '50px', textAlign: 'center' }}>+10d</Text>
           </div>
           
           {/* Legend */}
@@ -357,7 +427,7 @@ export default function PlantOverview() {
               <Text type="secondary" style={{ fontSize: 12 }}>Today</Text>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 16, height: 16, border: '2px solid #52c41a', borderRadius: 2 }}></div>
+              <div style={{ width: 16, height: 16, border: '2px dashed #52c41a', borderRadius: 6, backgroundImage: 'linear-gradient(45deg, #f0f0f0 25%, #e8e8e8 25%, #e8e8e8 50%, #f0f0f0 50%, #f0f0f0 75%, #e8e8e8 75%, #e8e8e8 100%)', backgroundSize: '8px 8px' }}></div>
               <Text type="secondary" style={{ fontSize: 12 }}>Next Watering</Text>
             </div>
           </div>
