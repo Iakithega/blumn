@@ -119,20 +119,20 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
           let style: CSSProperties = {
             width: '100%',
             height: '50px',
-            backgroundColor: watered ? '#52c41a' : '#f0f0f0',
-            borderRadius: isPast ? '3px' : '6px', // More rounded corners for future items
+            backgroundColor: watered ? 'var(--color-watered)' : 'var(--color-not-watered)',
+            borderRadius: isPast ? '6px' : '8px', // More rounded corners for everything, slightly more for future
             flexGrow: 1,
             flexBasis: 0,
             border: 'none',
             position: 'relative'
           };
           
-          // Today's marker (black/gray outline)
+          // Today's marker (darker brown outline)
           if (isToday) {
             style = {
               ...style,
-              border: '2px solid #333',
-              backgroundColor: '#f0f0f0'
+              border: '2px solid var(--color-today-border)',
+              backgroundColor: 'var(--color-not-watered)'
             };
           }
           
@@ -140,8 +140,8 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
           if (i === nextWatering) {
             style = {
               ...style,
-              border: '2px solid #52c41a',
-              backgroundColor: '#f0f0f0',
+              border: '2px solid var(--color-watered)',
+              backgroundColor: 'var(--color-not-watered)',
               borderStyle: 'dashed', // Dashed border for forecast
             };
           }
@@ -150,7 +150,7 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
           if (watered) {
             style = {
               ...style,
-              backgroundColor: '#52c41a',
+              backgroundColor: 'var(--color-watered)',
               border: 'none'
             };
           }
@@ -159,9 +159,11 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
           if (isFuture) {
             style = {
               ...style,
-              backgroundColor: style.backgroundColor === '#52c41a' ? '#7dda4d' : style.backgroundColor, // Lighter green for future
-              backgroundImage: style.backgroundColor === '#f0f0f0' ? 'linear-gradient(45deg, #f0f0f0 25%, #e8e8e8 25%, #e8e8e8 50%, #f0f0f0 50%, #f0f0f0 75%, #e8e8e8 75%, #e8e8e8 100%)' : 'none',
-              backgroundSize: '8px 8px', // Subtle pattern for future items
+              backgroundColor: style.backgroundColor === 'var(--color-watered)' ? 'var(--color-watered-light)' : style.backgroundColor, // Lighter green for future
+              backgroundImage: style.backgroundColor === 'var(--color-not-watered)' ? 
+                'linear-gradient(45deg, var(--color-not-watered) 25%, #E9E0C9 25%, #E9E0C9 50%, var(--color-not-watered) 50%, var(--color-not-watered) 75%, #E9E0C9 75%, #E9E0C9 100%)' : 
+                'none',
+              backgroundSize: '10px 10px', // Subtle pattern for future items
             };
           }
           
@@ -207,10 +209,12 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
                 flexBasis: 0,
                 textAlign: 'center',
                 fontSize: '9px',
-                fontWeight: isWeekend ? 'bold' : 'normal',
-                color: isWeekend ? '#666' : '#aaa', // Darker color for weekends
-                backgroundColor: isToday ? '#f0f0f099' : 'transparent',
-                borderRadius: '3px'
+                fontFamily: "'Quicksand', sans-serif",
+                fontWeight: isWeekend ? '600' : '500',
+                color: isWeekend ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', // Darker color for weekends
+                backgroundColor: isToday ? 'rgba(125, 157, 133, 0.15)' : 'transparent', // Subtle green highlight for today
+                borderRadius: '3px',
+                padding: '2px 0'
               }}
             >
               {day}
@@ -358,7 +362,7 @@ export default function PlantOverview() {
       <Card 
         key={plant.id} 
         style={{ marginBottom: 24 }}
-        bodyStyle={{ padding: 20 }}
+        bodyStyle={{ padding: 24 }}
       >
         {/* Top section - Plant Info */}
         <Row gutter={[16, 16]} align="top">
@@ -372,8 +376,9 @@ export default function PlantOverview() {
                 maxWidth: 140, 
                 height: 140, 
                 objectFit: 'cover', 
-                borderRadius: 8,
-                marginBottom: 8 
+                borderRadius: 12,
+                marginBottom: 8,
+                boxShadow: '0 4px 8px rgba(59, 46, 30, 0.1)'
               }}
             />
           </Col>
@@ -381,7 +386,7 @@ export default function PlantOverview() {
           {/* Right column - Plant Info */}
           <Col xs={24} sm={18} md={20}>
             <div style={{ marginBottom: 16 }}>
-              <Title level={4} style={{ marginBottom: 12 }}>{plant.name}</Title>
+              <Title level={4} style={{ marginBottom: 12, fontFamily: "'Quicksand', sans-serif", fontWeight: 600 }}>{plant.name}</Title>
               <Row gutter={24}>
                 <Col xs={24} sm={12}>
                   <Text strong>Last Watered:</Text><br />
@@ -395,18 +400,18 @@ export default function PlantOverview() {
             </div>
           </Col>
         </Row>
-          
+        
         <Divider style={{ margin: '16px 0' }} />
         
         {/* Bottom section - Full Width Watering History */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Text strong style={{ fontSize: 16 }}>Watering History & Forecast</Text>
-            <Text type="secondary">Watering Cycle: {periodicity} days</Text>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+            <Text strong style={{ fontSize: 16, fontFamily: "'Quicksand', sans-serif", color: 'var(--color-text-primary)' }}>Watering History & Forecast</Text>
+            <Text type="secondary" style={{ fontFamily: "'Quicksand', sans-serif" }}>Watering Cycle: {periodicity} days</Text>
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ flex: 1, padding: '0 12px' }}>
+            <div style={{ flex: 1 }}>
               <WateringHistory 
                 history={history} 
                 today={today} 
@@ -417,17 +422,17 @@ export default function PlantOverview() {
           </div>
           
           {/* Legend */}
-          <div style={{ marginTop: 12, display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
+          <div style={{ marginTop: 14, display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 16, height: 16, backgroundColor: '#52c41a', borderRadius: 2 }}></div>
+              <div style={{ width: 16, height: 16, backgroundColor: 'var(--color-watered)', borderRadius: 4 }}></div>
               <Text type="secondary" style={{ fontSize: 12 }}>Past Watering</Text>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 16, height: 16, border: '2px solid #333', borderRadius: 2 }}></div>
+              <div style={{ width: 16, height: 16, border: '2px solid var(--color-today-border)', borderRadius: 4 }}></div>
               <Text type="secondary" style={{ fontSize: 12 }}>Today</Text>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 16, height: 16, border: '2px dashed #52c41a', borderRadius: 6, backgroundImage: 'linear-gradient(45deg, #f0f0f0 25%, #e8e8e8 25%, #e8e8e8 50%, #f0f0f0 50%, #f0f0f0 75%, #e8e8e8 75%, #e8e8e8 100%)', backgroundSize: '8px 8px' }}></div>
+              <div style={{ width: 16, height: 16, border: '2px dashed var(--color-watered)', borderRadius: 6, backgroundImage: 'linear-gradient(45deg, var(--color-not-watered) 25%, #E9E0C9 25%, #E9E0C9 50%, var(--color-not-watered) 50%, var(--color-not-watered) 75%, #E9E0C9 75%, #E9E0C9 100%)', backgroundSize: '10px 10px' }}></div>
               <Text type="secondary" style={{ fontSize: 12 }}>Next Watering</Text>
             </div>
           </div>
@@ -437,8 +442,8 @@ export default function PlantOverview() {
   };
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 16px' }}>
-      <Title level={2}>Plant Overview</Title>
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px 16px' }}>
+      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Quicksand', sans-serif", fontWeight: 700, color: 'var(--color-text-primary)' }}>Plant Overview</Title>
       
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
