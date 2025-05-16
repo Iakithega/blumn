@@ -161,7 +161,7 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
               ...style,
               backgroundColor: style.backgroundColor === 'var(--color-watered)' ? 'var(--color-watered-light)' : style.backgroundColor, // Lighter green for future
               backgroundImage: style.backgroundColor === 'var(--color-not-watered)' ? 
-                'linear-gradient(45deg, var(--color-not-watered) 25%, #E9E0C9 25%, #E9E0C9 50%, var(--color-not-watered) 50%, var(--color-not-watered) 75%, #E9E0C9 75%, #E9E0C9 100%)' : 
+                'linear-gradient(45deg, var(--color-not-watered) 25%, #E0E0E0 25%, #E0E0E0 50%, var(--color-not-watered) 50%, var(--color-not-watered) 75%, #E0E0E0 75%, #E0E0E0 100%)' : 
                 'none',
               backgroundSize: '10px 10px', // Subtle pattern for future items
             };
@@ -432,7 +432,7 @@ export default function PlantOverview() {
               <Text type="secondary" style={{ fontSize: 12 }}>Today</Text>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 16, height: 16, border: '2px dashed var(--color-watered)', borderRadius: 6, backgroundImage: 'linear-gradient(45deg, var(--color-not-watered) 25%, #E9E0C9 25%, #E9E0C9 50%, var(--color-not-watered) 50%, var(--color-not-watered) 75%, #E9E0C9 75%, #E9E0C9 100%)', backgroundSize: '10px 10px' }}></div>
+              <div style={{ width: 16, height: 16, border: '2px dashed var(--color-watered)', borderRadius: 6, backgroundImage: 'linear-gradient(45deg, var(--color-not-watered) 25%, #E0E0E0 25%, #E0E0E0 50%, var(--color-not-watered) 50%, var(--color-not-watered) 75%, #E0E0E0 75%, #E0E0E0 100%)', backgroundSize: '10px 10px' }}></div>
               <Text type="secondary" style={{ fontSize: 12 }}>Next Watering</Text>
             </div>
           </div>
