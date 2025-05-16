@@ -202,4 +202,43 @@ class ExcelHandler:
                 row.append(row_data.get(header, ""))
             ws.append(row)
         
-        wb.save(self.file_path) 
+        wb.save(self.file_path)
+    
+    def get_plant_history(self, plant_name: str) -> List[Dict[str, Any]]:
+        """
+        Get all historical entries for a specific plant, ordered by date.
+        This is used for calculating periodicity and other trends.
+        """
+        wb = openpyxl.load_workbook(self.file_path, data_only=True)
+        ws = wb.active
+        
+        # Get headers
+        headers = [cell.value for cell in ws[1]]
+        
+        # Get all rows for this plant
+        plant_data = []
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            row_data = dict(zip(headers, row))
+            if row_data.get("plant name") == plant_name and row_data.get("date"):
+                # Parse date
+                date_value = row_data["date"]
+                if isinstance(date_value, str):
+                    try:
+                        date_value = datetime.strptime(date_value, "%d.%m.%Y").date()
+                    except ValueError:
+                        try:
+                            date_value = parse(date_value).date()
+                        except:
+                            continue  # Skip if date can't be parsed
+                elif isinstance(date_value, datetime):
+                    date_value = date_value.date()
+                else:
+                    continue  # Skip if date is missing or invalid
+                
+                row_data["date"] = date_value  # Replace with parsed date
+                plant_data.append(row_data)
+        
+        # Sort by date (oldest first)
+        plant_data.sort(key=lambda x: x["date"])
+        
+        return plant_data 
