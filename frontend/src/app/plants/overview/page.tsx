@@ -88,11 +88,18 @@ function generateWateringHistory(plantName: string, wateringHistory: WateringHis
     const daysSinceLastWatering = Math.floor((today.getTime() - lastWatering.getTime()) / (1000 * 60 * 60 * 24));
     
     // Calculate days until next watering
-    const daysUntilNextWatering = periodicity - (daysSinceLastWatering % periodicity);
+    const daysUntilNextWatering = Math.ceil(periodicity - (daysSinceLastWatering % periodicity));
+    
+    // If days until next watering is 0 or negative, we need to water today or the periodicity has been reached
+    const actualDaysUntilNextWatering = daysUntilNextWatering <= 0 ? 
+      periodicity : daysUntilNextWatering;
+    
+    console.log(`Plant: ${plantName}, Last watering: ${daysSinceLastWatering} days ago, Periodicity: ${periodicity}, Days until next: ${actualDaysUntilNextWatering}`);
     
     // If next watering is within our future window, mark it
-    if (daysUntilNextWatering <= futureDays) {
-      nextWateringIndex = todayIndex + daysUntilNextWatering;
+    if (actualDaysUntilNextWatering <= futureDays) {
+      nextWateringIndex = todayIndex + actualDaysUntilNextWatering;
+      console.log(`Setting next watering index to: ${nextWateringIndex}`);
     }
   }
   
@@ -106,10 +113,27 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
   nextWatering: number,
   weekdays: string[]
 }) {
+  // Find watering events and calculate days between them
+  const wateringPositions: number[] = [];
+  const daysBetween: {startPos: number, endPos: number, days: number}[] = [];
+  
+  // Find all watering positions in the history
+  history.forEach((watered, i) => {
+    if (watered) wateringPositions.push(i);
+  });
+  
+  // Calculate days between consecutive waterings
+  for (let i = 0; i < wateringPositions.length - 1; i++) {
+    const start = wateringPositions[i];
+    const end = wateringPositions[i + 1];
+    const days = end - start;
+    daysBetween.push({startPos: start, endPos: end, days});
+  }
+  
   return (
     <div>
       {/* Main timeline */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '50px', width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '50px', width: '100%', position: 'relative' }}>
         {history.map((watered, i) => {
           // Determine if this is past, today, or future
           const isPast = i < today;
@@ -190,6 +214,42 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
             <Tooltip key={i} title={tooltipText}>
               <div style={style} />
             </Tooltip>
+          );
+        })}
+        
+        {/* Day count badges */}
+        {daysBetween.map((interval, index) => {
+          const startPos = interval.startPos;
+          const endPos = interval.endPos;
+          const midpoint = startPos + (endPos - startPos) / 2;
+          
+          // Skip future intervals (we only want to show past watering intervals)
+          if (startPos >= today) return null;
+          
+          // Calculate position as percentage of total width
+          const leftPosition = (midpoint / history.length) * 100;
+          
+          return (
+            <div 
+              key={`interval-${index}`}
+              style={{
+                position: 'absolute',
+                left: `${leftPosition}%`,
+                top: '-10px',
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                border: '1px solid rgba(125, 157, 133, 0.3)',
+                borderRadius: '8px',
+                padding: '0px 3px',
+                fontSize: '9px',
+                fontWeight: '500',
+                color: 'var(--color-text-secondary)',
+                zIndex: 10,
+                boxShadow: '0 1px 1px rgba(0,0,0,0.05)'
+              }}
+            >
+              {interval.days}d
+            </div>
           );
         })}
       </div>
