@@ -120,7 +120,7 @@ async def test_watering_periodicity():
 def calculate_watering_periodicity(plant_name: str) -> float:
     """
     Calculate the actual watering periodicity of a plant considering only
-    the time since it was first acquired/recorded in the system.
+    the time between actual watering events.
     
     Returns:
         The average days between waterings
@@ -130,9 +130,6 @@ def calculate_watering_periodicity(plant_name: str) -> float:
     
     if not plant_data:
         return None  # No data available
-    
-    # First entry is the acquisition date or first record
-    first_date = plant_data[0]["date"]
     
     # Find all watering events (days where days_without_water = 0)
     watering_dates = []
@@ -156,6 +153,4 @@ def calculate_watering_periodicity(plant_name: str) -> float:
     if intervals:
         return sum(intervals) / len(intervals)
     
-    # As a fallback, calculate days since acquisition divided by number of waterings
-    total_days = (datetime.now().date() - first_date).days
-    return total_days / len(watering_dates) if len(watering_dates) > 0 else None 
+    return None  # If we couldn't calculate periodicity 

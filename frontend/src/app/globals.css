@@ -1,3 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Plant-friendly color palette */
+  --color-background: #F5F1E6;
+  --color-card: #F8F7F5;
+  --color-text-primary: #3B2E1E;
+  --color-text-secondary: #6B563E;
+  --color-accent-primary: #7D9D85;
+  --color-accent-secondary: #A5C3A7;
+  --color-watered: #5E9C64;
+  --color-watered-light: #8CB990;
+  --color-not-watered: #EFEFEF;
+  --color-today-border: #695642;
+  --color-divider: #E7DCC6;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: 'Open Sans', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Quicksand', sans-serif;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+a {
+  color: var(--color-accent-primary);
+  text-decoration: none;
+}
+
+/* Override Ant Design styles */
+.ant-card {
+  background-color: var(--color-card) !important;
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(107, 86, 62, 0.08) !important;
+}
+
+.ant-divider {
+  border-color: var(--color-divider) !important;
+}
+
+.ant-typography {
+  color: var(--color-text-primary) !important;
+}
+
+.ant-typography.ant-typography-secondary {
+  color: var(--color-text-secondary) !important;
+}
+
 /* Global styles */
 body {
   margin: 0;

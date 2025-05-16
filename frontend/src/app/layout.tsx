@@ -42,16 +42,55 @@ export default function RootLayout({
         <StyledComponentsRegistry>
           <ConfigProvider>
             <Layout className="site-layout">
-              <Header style={{ padding: 0, background: '#fff' }}>
-                <div style={{ display: 'flex', alignItems: 'center', padding: '0 24px' }}>
-                  <h1 style={{ margin: 0, marginRight: '24px', fontSize: '20px', color: '#1890ff' }}>
+              <Header style={{ 
+                padding: 0, 
+                background: 'var(--color-card)',
+                borderBottom: '1px solid var(--color-divider)',
+                boxShadow: '0 2px 8px rgba(107, 86, 62, 0.05)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '0 24px', height: '64px' }}>
+                  <h1 style={{ 
+                    margin: 0, 
+                    marginRight: '32px', 
+                    fontSize: '22px', 
+                    fontFamily: "'Quicksand', sans-serif",
+                    fontWeight: 700,
+                    color: 'var(--color-accent-primary)'
+                  }}>
                     Blumn
                   </h1>
                   <nav>
-                    <a href="/" style={{ marginRight: '20px' }}>Home</a>
-                    <a href="/plants" style={{ marginRight: '20px' }}>Plants</a>
-                    <a href="/plants/overview" style={{ marginRight: '20px' }}>Plant Overview</a>
-                    <a href="/care-history">Care History</a>
+                    <a href="/" style={{ 
+                      marginRight: '24px', 
+                      color: 'var(--color-text-secondary)', 
+                      fontFamily: "'Open Sans', sans-serif",
+                      fontSize: '15px',
+                      fontWeight: 500,
+                      transition: 'color 0.2s'
+                    }}>Home</a>
+                    <a href="/plants" style={{ 
+                      marginRight: '24px', 
+                      color: 'var(--color-text-secondary)',
+                      fontFamily: "'Open Sans', sans-serif",
+                      fontSize: '15px',
+                      fontWeight: 500,
+                      transition: 'color 0.2s'
+                    }}>Plants</a>
+                    <a href="/plants/overview" style={{ 
+                      marginRight: '24px', 
+                      color: 'var(--color-accent-primary)',
+                      fontFamily: "'Open Sans', sans-serif",
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      transition: 'color 0.2s'
+                    }}>Plant Overview</a>
+                    <a href="/care-history" style={{ 
+                      color: 'var(--color-text-secondary)',
+                      fontFamily: "'Open Sans', sans-serif",
+                      fontSize: '15px',
+                      fontWeight: 500,
+                      transition: 'color 0.2s'
+                    }}>Care History</a>
                   </nav>
                 </div>
               </Header>
