@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build && npm run export",
+    "build": "cd frontend && npm run build",
     "start": "cd frontend && npm run start",
     "postinstall": "cd frontend && npm install --include=dev"
   },
