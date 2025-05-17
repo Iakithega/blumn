@@ -5,7 +5,9 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: process.env.API_URL || 'http://localhost:8000/api/:path*',
+        destination: process.env.NODE_ENV === 'production' 
+          ? '/api/:path*'  // In production, forward to the same server
+          : 'http://localhost:8000/api/:path*', // In development, forward to the backend server
       },
     ]
   },

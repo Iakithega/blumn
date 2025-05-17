@@ -428,8 +428,8 @@ export default function PlantOverview() {
   const [wateringHistory, setWateringHistory] = useState<WateringHistoryData[]>([]);
 
   useEffect(() => {
-    // Fetch plants data
-    fetch('http://127.0.0.1:8000/api/plants/today')
+    // Fetch plants data - using relative URLs instead of hardcoded localhost
+    fetch('/api/plants/today')
       .then(res => res.json())
       .then(data => {
         // If watering_schedule and fertilizing_schedule are missing, add defaults
@@ -442,8 +442,8 @@ export default function PlantOverview() {
         setLoading(false);
       });
     
-    // Fetch watering periodicity data
-    fetch('http://127.0.0.1:8000/api/plants/periodicity')
+    // Fetch watering periodicity data - using relative URLs
+    fetch('/api/plants/periodicity')
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
@@ -461,8 +461,8 @@ export default function PlantOverview() {
         console.error("Error fetching periodicity data:", error);
       });
 
-    // Fetch raw plant data to extract watering history
-    fetch('http://127.0.0.1:8000/api/plants')
+    // Fetch raw plant data to extract watering history - using relative URLs
+    fetch('/api/plants')
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {

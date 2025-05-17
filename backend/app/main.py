@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import os
@@ -37,7 +37,7 @@ if IS_PRODUCTION:
     frontend_dir = os.path.join(BASE_DIR, "frontend", ".next")
     static_dir = os.path.join(BASE_DIR, "frontend", "public")
     if os.path.exists(frontend_dir):
-        app.mount("/_next", StaticFiles(directory=frontend_dir), name="next-static")
+        app.mount("/_next", StaticFiles(directory=os.path.join(frontend_dir, "_next")), name="next-static")
     if os.path.exists(static_dir):
         app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
@@ -177,4 +177,32 @@ def calculate_watering_periodicity(plant_name: str) -> float:
     if intervals:
         return sum(intervals) / len(intervals)
     
-    return None  # If we couldn't calculate periodicity 
+    return None  # If we couldn't calculate periodicity
+
+# Catch-all route for serving Next.js frontend pages in production
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str, request: Request):
+    # Only serve frontend in production mode
+    if not IS_PRODUCTION or full_path.startswith("api/"):
+        return {"detail": "Not Found"}
+    
+    # Find the appropriate file from the Next.js build
+    requested_path = full_path
+    
+    # Check if the requested path exists
+    possible_paths = [
+        os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", requested_path, "index.html"),
+        os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", f"{requested_path}.html")
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return FileResponse(path)
+    
+    # If no specific page found, try to serve the 404 page
+    not_found_path = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "404.html")
+    if os.path.exists(not_found_path):
+        return FileResponse(not_found_path)
+    
+    # Last resort fallback
+    return {"detail": "Not Found"} 

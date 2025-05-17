@@ -1,4 +1,8 @@
 #!/bin/bash
+# Set production mode
+export PRODUCTION=true
+
+# Build frontend
 cd frontend && npm run build
 cd ..
 
