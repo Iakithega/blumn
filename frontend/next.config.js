@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'export',  // Export static HTML
-  distDir: 'out',    // Output to the 'out' directory
   async rewrites() {
     return [
       {
@@ -12,10 +10,6 @@ const nextConfig = {
           : 'http://localhost:8000/api/:path*', // In development, forward to the backend server
       },
     ]
-  },
-  // Make sure images work with static export
-  images: {
-    unoptimized: true,
   },
 }
 
