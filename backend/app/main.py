@@ -33,36 +33,34 @@ IS_PRODUCTION = os.environ.get("PRODUCTION", "False").lower() == "true"
 
 # If in production, serve frontend static files
 if IS_PRODUCTION:
-    # Check if Next.js output directory exists
-    next_static_dir = os.path.join(BASE_DIR, "frontend", ".next", "static")
-    public_dir = os.path.join(BASE_DIR, "frontend", "public") # Renamed for clarity
-    
-    if os.path.exists(next_static_dir):
-        app.mount("/_next", StaticFiles(directory=next_static_dir), name="next-static")
-    if os.path.exists(public_dir): # Use public_dir here
-        app.mount("/static", StaticFiles(directory=public_dir), name="public-static") # Use public_dir here
+    # Path to the static export directory produced by `next export`
+    EXPORT_DIR = os.path.join(BASE_DIR, "frontend", "out")
+
+    # The exported site will contain an "_next" folder with JS chunks + assets
+    next_export_static = os.path.join(EXPORT_DIR, "_next")
+
+    # Mount the entire export directory at "/" **after** API routes are defined via a catch-all.
+    # We still mount the _next folder explicitly so that hashed asset URLs are served efficiently.
+    if os.path.exists(next_export_static):
+        app.mount("/_next", StaticFiles(directory=next_export_static), name="next-export-static")
+
+    # Mount any additional public/static assets (images, CSS, etc.) that might exist in the export dir
+    app.mount("/static", StaticFiles(directory=EXPORT_DIR), name="frontend-static")
+
+    # Make the export directory path accessible to other handlers
+    FRONTEND_EXPORT_DIR = EXPORT_DIR
+else:
+    FRONTEND_EXPORT_DIR = None
 
 @app.get("/")
 async def root(request: Request): # Add request parameter
     # In production, serve the frontend's main index.html
-    if IS_PRODUCTION:
-        # For Next.js, the entry point is usually within the .next/server/pages or .next/server/app directory
-        # A common pattern is to serve the index.html and let client-side routing take over.
-        # Let's try a more general path for Next.js 13+ App Router or Pages Router
-        
-        # Path for Pages Router (typical)
-        index_html_path = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "index.html")
+    if IS_PRODUCTION and FRONTEND_EXPORT_DIR:
+        index_html_path = os.path.join(FRONTEND_EXPORT_DIR, "index.html")
 
-        # Fallback for App Router (might be different, often a root layout)
-        # For simplicity, we'll stick to a common index.html for now.
-        # If using App router and this fails, this path needs to point to the main entry HTML.
-        
         if os.path.exists(index_html_path):
-            return FileResponse(index_html_path)
+            return FileResponse(index_html_path, media_type="text/html")
         else:
-            # If specific index.html isn't found, it might indicate an issue with build or paths.
-            # Log this or handle appropriately. For now, falling back to API message.
-            # In a real scenario, you'd want to ensure this index.html always exists.
             print(f"Warning: Frontend index.html not found at {index_html_path}")
             return {"message": "Welcome to Blumn Plant Care Tracker - Frontend not found"}
 
@@ -239,34 +237,31 @@ async def serve_frontend(full_path: str, request: Request):
         # This return statement will likely not be hit if StaticFiles is configured correctly.
         return {"detail": "Resource not found"}, 404
 
+    if IS_PRODUCTION and FRONTEND_EXPORT_DIR:
+        # Attempt to resolve a static HTML file that matches the requested path within the export directory
+        # e.g. /plants/overview -> frontend/out/plants/overview/index.html (preferred) or frontend/out/plants/overview.html
 
-    if IS_PRODUCTION:
-        # For any non-API path, serve the main index.html from Next.js.
-        # Next.js client-side router will handle the specific page (e.g., /plants/overview)
+        # Normalise path to avoid directory traversal
+        safe_path = os.path.normpath(full_path).lstrip("/\\")
+
+        # First try folder style path (plants/overview/index.html)
+        candidate_a = os.path.join(FRONTEND_EXPORT_DIR, safe_path, "index.html")
+        # Then flat html (plants/overview.html)
+        candidate_b = os.path.join(FRONTEND_EXPORT_DIR, f"{safe_path}.html")
+
+        if os.path.exists(candidate_a):
+            return FileResponse(candidate_a, media_type="text/html")
+        if os.path.exists(candidate_b):
+            return FileResponse(candidate_b, media_type="text/html")
+
+        # Fallback to root index.html (client-side routing may handle it)
+        fallback_index = os.path.join(FRONTEND_EXPORT_DIR, "index.html")
+        if os.path.exists(fallback_index):
+            return FileResponse(fallback_index, media_type="text/html")
         
-        # Path for Pages Router (typical index.html)
-        index_html_path = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "index.html")
+        print(f"CRITICAL: Could not resolve static page for path '{full_path}' in export dir {FRONTEND_EXPORT_DIR}")
+        return {"detail": "Frontend page not found in static export."}, 404
 
-        # Alternative path if Next.js build places a generic index.html in a different location
-        # For example, some build configurations might output to `frontend/out/index.html` for static export
-        # Check your `next.config.js` if `output: 'export'` is used.
-        # If `output: 'export'` is used, the path would be `os.path.join(BASE_DIR, "frontend", "out", "index.html")`
-        # and for specific pages like /plants/overview, it would be `frontend/out/plants/overview.html`
-
-        # The `full_path` for /plants/overview will be "plants/overview"
-        # If Next.js `output: 'export'` is used, you'd serve `frontend/out/{full_path}.html` or `frontend/out/{full_path}/index.html`
-        # And for the root, `frontend/out/index.html`
-
-        # For a standard Next.js SSR/SSG setup (not `output: 'export'`), serving the root index.html 
-        # from the .next/server/pages directory is a common approach for the catch-all.
-        
-        if os.path.exists(index_html_path):
-            return FileResponse(index_html_path, media_type="text/html")
-        else:
-            # This indicates a critical issue: the main entry point for the frontend is missing.
-            print(f"CRITICAL: Frontend entry point 'index.html' not found at {index_html_path}")
-            return {"detail": "Frontend entry point not found. Check deployment."}, 500
-            
     # If not IS_PRODUCTION, or if somehow the index.html was not served (should not happen if IS_PRODUCTION and file exists)
     # This fallback is mostly for non-production or misconfiguration.
     return {"detail": "Not Found - Ensure IS_PRODUCTION is set and frontend is built correctly."} 
