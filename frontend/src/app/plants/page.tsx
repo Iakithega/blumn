@@ -102,7 +102,6 @@ export default function PlantsPage() {
       render: (_: unknown, record: Plant) => (
         <Space>
           <Button type="link">Edit</Button>
-          <Button type="link">Care History</Button>
         </Space>
       ),
     },

@@ -1,7 +1,7 @@
 'use client'
 
 import { Layout } from 'antd'
-import { HomeOutlined, ExperimentOutlined, HistoryOutlined } from '@ant-design/icons'
+import { HomeOutlined, ExperimentOutlined } from '@ant-design/icons'
 import './globals.css'
 import { ConfigProvider } from 'antd'
 import StyledComponentsRegistry from './registry'
@@ -28,11 +28,6 @@ export default function RootLayout({
       key: '/plants/overview',
       icon: <ExperimentOutlined />,
       label: 'Plants Overview',
-    },
-    {
-      key: '/care-history',
-      icon: <HistoryOutlined />,
-      label: 'Care History',
     },
   ]
 
@@ -77,20 +72,12 @@ export default function RootLayout({
                       transition: 'color 0.2s'
                     }}>Plants</a>
                     <a href="/plants/overview" style={{ 
-                      marginRight: '24px', 
                       color: 'var(--color-accent-primary)',
                       fontFamily: "'Open Sans', sans-serif",
                       fontSize: '15px',
                       fontWeight: 600,
                       transition: 'color 0.2s'
                     }}>Plants Overview</a>
-                    <a href="/care-history" style={{ 
-                      color: 'var(--color-text-secondary)',
-                      fontFamily: "'Open Sans', sans-serif",
-                      fontSize: '15px',
-                      fontWeight: 500,
-                      transition: 'color 0.2s'
-                    }}>Care History</a>
                   </nav>
                 </div>
               </Header>
