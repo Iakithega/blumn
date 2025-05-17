@@ -1,0 +1,4 @@
+build:
+  buildpacks:
+    - heroku/nodejs
+    - heroku/python 

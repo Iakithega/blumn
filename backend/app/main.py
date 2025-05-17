@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import os
 from datetime import datetime
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from .core.excel_handler import ExcelHandler
 from .models.plant import Plant
@@ -21,11 +23,32 @@ app.add_middleware(
 
 # Initialize Excel handler with absolute path
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-EXCEL_FILE_PATH = os.path.join(BASE_DIR, "data", "blumen_data.xlsx")
+# Check if running on Heroku (use DATA_PATH env var if provided)
+EXCEL_FILE_PATH = os.environ.get('DATA_PATH', os.path.join(BASE_DIR, "data", "blumen_data.xlsx"))
 excel_handler = ExcelHandler(EXCEL_FILE_PATH)
+
+# Check if running in production mode (Heroku)
+IS_PRODUCTION = os.environ.get("PRODUCTION", "False").lower() == "true"
+
+# If in production, serve frontend static files
+if IS_PRODUCTION:
+    # Check if Next.js output directory exists
+    frontend_dir = os.path.join(BASE_DIR, "frontend", ".next")
+    static_dir = os.path.join(BASE_DIR, "frontend", "public")
+    if os.path.exists(frontend_dir):
+        app.mount("/_next", StaticFiles(directory=frontend_dir), name="next-static")
+    if os.path.exists(static_dir):
+        app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/")
 async def root():
+    # In production, serve the frontend
+    if IS_PRODUCTION:
+        frontend_index = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "index.html")
+        if os.path.exists(frontend_index):
+            return FileResponse(frontend_index)
+    
+    # Default API response
     return {"message": "Welcome to Blumn Plant Care Tracker"}
 
 @app.get("/api/plants")
