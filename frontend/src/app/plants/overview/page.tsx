@@ -604,7 +604,7 @@ export default function PlantOverview() {
       {/* Add style element for animation */}
       <style>{pulseAnimation}</style>
       
-      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Quicksand', sans-serif", fontWeight: 700, color: 'var(--color-text-primary)' }}>Plant Overview</Title>
+      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Quicksand', sans-serif", fontWeight: 700, color: 'var(--color-text-primary)' }}>Plants Overview</Title>
       
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px 0' }}>

@@ -27,7 +27,7 @@ export default function RootLayout({
     {
       key: '/plants/overview',
       icon: <ExperimentOutlined />,
-      label: 'Plant Overview',
+      label: 'Plants Overview',
     },
     {
       key: '/care-history',
@@ -52,12 +52,12 @@ export default function RootLayout({
                   <h1 style={{ 
                     margin: 0, 
                     marginRight: '32px', 
-                    fontSize: '22px', 
+                    fontSize: '28px', 
                     fontFamily: "'Quicksand', sans-serif",
                     fontWeight: 700,
                     color: 'var(--color-accent-primary)'
                   }}>
-                    Blumn
+                    BLUMN
                   </h1>
                   <nav>
                     <a href="/" style={{ 
@@ -83,7 +83,7 @@ export default function RootLayout({
                       fontSize: '15px',
                       fontWeight: 600,
                       transition: 'color 0.2s'
-                    }}>Plant Overview</a>
+                    }}>Plants Overview</a>
                     <a href="/care-history" style={{ 
                       color: 'var(--color-text-secondary)',
                       fontFamily: "'Open Sans', sans-serif",
