@@ -6,11 +6,11 @@
     "dev": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
     "start": "cd frontend && npm run start",
-    "postinstall": "cd frontend && npm install"
+    "postinstall": "cd frontend && npm install --include=dev"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
+    "node": "18.x",
+    "npm": "8.x"
   },
   "cacheDirectories": [
     "frontend/node_modules"
