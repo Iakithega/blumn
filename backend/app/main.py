@@ -4,7 +4,7 @@ from pathlib import Path
 import os
 from datetime import datetime
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
 from .core.excel_handler import ExcelHandler
 from .models.plant import Plant
@@ -33,13 +33,15 @@ IS_PRODUCTION = os.environ.get("PRODUCTION", "False").lower() == "true"
 
 # If in production, serve frontend static files
 if IS_PRODUCTION:
-    # Check if Next.js output directory exists
-    frontend_dir = os.path.join(BASE_DIR, "frontend", ".next")
-    static_dir = os.path.join(BASE_DIR, "frontend", "public")
-    if os.path.exists(frontend_dir):
-        app.mount("/_next", StaticFiles(directory=frontend_dir), name="next-static")
-    if os.path.exists(static_dir):
-        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    # Mount Next.js static files and assets
+    next_static_dir = os.path.join(BASE_DIR, "frontend", ".next", "static")
+    if os.path.exists(next_static_dir):
+        app.mount("/_next/static", StaticFiles(directory=next_static_dir), name="next-static")
+    
+    # Mount public directory
+    public_dir = os.path.join(BASE_DIR, "frontend", "public")
+    if os.path.exists(public_dir):
+        app.mount("/public", StaticFiles(directory=public_dir), name="public")
 
 @app.get("/")
 async def root():
@@ -179,30 +181,44 @@ def calculate_watering_periodicity(plant_name: str) -> float:
     
     return None  # If we couldn't calculate periodicity
 
+@app.get("/plants/overview")
+async def plants_overview():
+    # In production mode, serve the Next.js page for this route
+    if IS_PRODUCTION:
+        # For Next.js App Router, check for the HTML file at the correct location
+        html_file = os.path.join(BASE_DIR, "frontend", ".next", "server", "app", "plants", "overview", "page.html")
+        if os.path.exists(html_file):
+            return FileResponse(html_file)
+    
+    # Fallback to API data response
+    return {
+        "plants": [
+            {"name": "Plant 1", "status": "Needs water", "days_since_watering": 7},
+            {"name": "Plant 2", "status": "Healthy", "days_since_watering": 2}
+        ]
+    }
+
 # Catch-all route for serving Next.js frontend pages in production
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str, request: Request):
-    # Only serve frontend in production mode
-    if not IS_PRODUCTION or full_path.startswith("api/"):
+    # Skip API routes
+    if full_path.startswith("api/"):
         return {"detail": "Not Found"}
     
-    # Find the appropriate file from the Next.js build
-    requested_path = full_path
+    # In production mode, try to serve Next.js pages
+    if IS_PRODUCTION:
+        # For Next.js App Router, the structure is different
+        # Try different possible paths based on App Router conventions
+        possible_paths = [
+            # App Router HTML files
+            os.path.join(BASE_DIR, "frontend", ".next", "server", "app", full_path, "page.html"),
+            # Handle root index page
+            os.path.join(BASE_DIR, "frontend", ".next", "server", "app", "page.html") if full_path == "" else None,
+        ]
+        
+        for path in possible_paths:
+            if path and os.path.exists(path):
+                return FileResponse(path)
     
-    # Check if the requested path exists
-    possible_paths = [
-        os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", requested_path, "index.html"),
-        os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", f"{requested_path}.html")
-    ]
-    
-    for path in possible_paths:
-        if os.path.exists(path):
-            return FileResponse(path)
-    
-    # If no specific page found, try to serve the 404 page
-    not_found_path = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "404.html")
-    if os.path.exists(not_found_path):
-        return FileResponse(not_found_path)
-    
-    # Last resort fallback
+    # Default fallback for any route not found
     return {"detail": "Not Found"} 
