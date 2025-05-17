@@ -4,6 +4,40 @@ import { Table, Card, Row, Col, Typography, Tooltip, Divider } from 'antd';
 
 const { Title, Text } = Typography;
 
+// CSS keyframes for pulsing animation
+const pulseAnimation = `
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.5);
+    }
+    70% {
+      box-shadow: 0 0 0 6px rgba(52, 152, 219, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
+    }
+  }
+`;
+
+// Water droplet SVG icon for "water today" indicator
+const WaterDropletIcon = () => (
+  <svg 
+    width="14" 
+    height="14" 
+    viewBox="0 0 24 24" 
+    fill="#3498db" 
+    style={{ 
+      position: 'absolute', 
+      top: '3px', 
+      right: '3px',
+      filter: 'drop-shadow(0px 1px 1px rgba(0,0,0,0.3))',
+      zIndex: 5
+    }}
+  >
+    <path d="M12,20A6,6 0 0,1 6,14C6,10 12,3.25 12,3.25C12,3.25 18,10 18,14A6,6 0 0,1 12,20Z" />
+  </svg>
+);
+
 interface Plant {
   id: number;
   name: string;
@@ -40,6 +74,7 @@ function generateWateringHistory(plantName: string, wateringHistory: WateringHis
   
   // Get today's date
   const today = new Date();
+  const todayStr = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getFullYear()}`;
   
   // Fill in weekdays array
   for (let i = 0; i < totalDays; i++) {
@@ -53,6 +88,12 @@ function generateWateringHistory(plantName: string, wateringHistory: WateringHis
   
   if (!plantHistory) return { history, today: todayIndex, nextWatering: nextWateringIndex, weekdays };
 
+  // Special handling for days_since_watering = 0 (watered today)
+  // If the plant was watered today (according to the API), mark today as watered
+  if (daysAgo === 0) {
+    history[todayIndex] = true;
+  }
+
   // Convert watering dates to Date objects
   const wateringDates = plantHistory.watering_dates.map(dateStr => {
     const parts = dateStr.split('.');
@@ -61,6 +102,12 @@ function generateWateringHistory(plantName: string, wateringHistory: WateringHis
   
   // Sort dates in ascending order
   wateringDates.sort((a, b) => a.getTime() - b.getTime());
+  
+  // Check if today's date is in the watering dates list
+  const wateredToday = plantHistory.watering_dates.includes(todayStr);
+  if (wateredToday) {
+    history[todayIndex] = true;
+  }
   
   // Mark watering days in the past
   for (let i = 0; i < pastDays; i++) {
@@ -88,18 +135,12 @@ function generateWateringHistory(plantName: string, wateringHistory: WateringHis
     const daysSinceLastWatering = Math.floor((today.getTime() - lastWatering.getTime()) / (1000 * 60 * 60 * 24));
     
     // Calculate days until next watering
-    const daysUntilNextWatering = Math.ceil(periodicity - (daysSinceLastWatering % periodicity));
-    
-    // If days until next watering is 0 or negative, we need to water today or the periodicity has been reached
-    const actualDaysUntilNextWatering = daysUntilNextWatering <= 0 ? 
-      periodicity : daysUntilNextWatering;
-    
-    console.log(`Plant: ${plantName}, Last watering: ${daysSinceLastWatering} days ago, Periodicity: ${periodicity}, Days until next: ${actualDaysUntilNextWatering}`);
+    const daysUntilNextWatering = daysSinceLastWatering % periodicity === 0 ? 
+      0 : Math.ceil(periodicity - (daysSinceLastWatering % periodicity));
     
     // If next watering is within our future window, mark it
-    if (actualDaysUntilNextWatering <= futureDays) {
-      nextWateringIndex = todayIndex + actualDaysUntilNextWatering;
-      console.log(`Setting next watering index to: ${nextWateringIndex}`);
+    if (daysUntilNextWatering <= futureDays) {
+      nextWateringIndex = todayIndex + daysUntilNextWatering;
     }
   }
   
@@ -139,39 +180,73 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
           const isPast = i < today;
           const isToday = i === today;
           const isFuture = i > today;
+          const isNextWatering = i === nextWatering;
           
+          // Determine all possible combinations
+          const isTodayAndNextWatering = isToday && isNextWatering && !watered; // Only show next watering if not already watered
+          const isTodayAndWatered = isToday && watered;
+          
+          // Set base style
           let style: CSSProperties = {
             width: '100%',
             height: '50px',
-            backgroundColor: watered ? 'var(--color-watered)' : 'var(--color-not-watered)',
-            borderRadius: isPast ? '6px' : '8px', // More rounded corners for everything, slightly more for future
+            backgroundColor: 'var(--color-not-watered)',
+            borderRadius: isPast ? '6px' : '8px',
             flexGrow: 1,
             flexBasis: 0,
             border: 'none',
             position: 'relative'
           };
           
-          // Next watering marker (green outline with different style for forecast)
-          if (i === nextWatering) {
+          // Apply appropriate style based on combinations
+          
+          // Case 1: Today + Next Watering (only if not already watered)
+          if (isTodayAndNextWatering) {
             style = {
               ...style,
-              border: '2px solid var(--color-watered)',
+              // Keep a clean background with just the green dashed border
               backgroundColor: 'var(--color-not-watered)',
-              borderStyle: 'dashed', // Dashed border for forecast
+              border: '2px dashed var(--color-watered)',
+              // Keep the pulsing animation
+              animation: 'pulse 2s infinite'
             };
           }
-          
-          // Today's marker (darker brown outline)
-          if (isToday) {
+          // Case 2: Today + Past Watering (user watered today)
+          else if (isTodayAndWatered) {
+            style = {
+              ...style,
+              backgroundColor: 'var(--color-watered)',
+              // Add the today border to show it's today
+              border: '2px solid var(--color-today-border)'
+            };
+          }
+          // Case 3: Just Today
+          else if (isToday) {
             style = {
               ...style,
               border: '2px solid var(--color-today-border)',
               backgroundColor: 'var(--color-not-watered)'
             };
           }
-          
-          // Watering in the past
-          if (watered) {
+          // Case 4: Just Next Watering
+          else if (isNextWatering) {
+            style = {
+              ...style,
+              border: '2px dashed var(--color-watered)',
+              backgroundColor: 'var(--color-not-watered)'
+            };
+            
+            // Add diagonal pattern for forecast period (future days)
+            if (isFuture) {
+              style = {
+                ...style,
+                backgroundImage: 'linear-gradient(45deg, var(--color-not-watered) 25%, #E0E0E0 25%, #E0E0E0 50%, var(--color-not-watered) 50%, var(--color-not-watered) 75%, #E0E0E0 75%, #E0E0E0 100%)',
+                backgroundSize: '10px 10px'
+              };
+            }
+          }
+          // Case 5: Just Past Watering
+          else if (watered) {
             style = {
               ...style,
               backgroundColor: 'var(--color-watered)',
@@ -179,15 +254,15 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
             };
           }
           
-          // Style adjustments for future items (forecast)
-          if (isFuture) {
+          // Style adjustments for future items (forecast) - only apply to regular future days, not next watering
+          if (isFuture && !isNextWatering) {
             style = {
               ...style,
-              backgroundColor: style.backgroundColor === 'var(--color-watered)' ? 'var(--color-watered-light)' : style.backgroundColor, // Lighter green for future
+              backgroundColor: style.backgroundColor === 'var(--color-watered)' ? 'var(--color-watered-light)' : style.backgroundColor,
               backgroundImage: style.backgroundColor === 'var(--color-not-watered)' ? 
                 'linear-gradient(45deg, var(--color-not-watered) 25%, #E0E0E0 25%, #E0E0E0 50%, var(--color-not-watered) 50%, var(--color-not-watered) 75%, #E0E0E0 75%, #E0E0E0 100%)' : 
                 'none',
-              backgroundSize: '10px 10px', // Subtle pattern for future items
+              backgroundSize: '10px 10px'
             };
           }
           
@@ -202,17 +277,40 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
           const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
           const weekday = weekdayNames[date.getDay()];
           
-          const tooltipText = i < today ? 
-            `${weekday}, ${Math.abs(daysFromToday)} days ago: ${watered ? 'Watered' : 'Not watered'}` : 
-            i === today ? 
-              `Today (${weekday})` : 
-              i === nextWatering ? 
-                `${weekday}, ${daysFromToday} days from now: Next watering` : 
-                `${weekday}, ${daysFromToday} days from now`;
+          // Create tooltip text that shows all applicable states
+          let tooltipText = '';
+          
+          // Today + Next Watering
+          if (isTodayAndNextWatering) {
+            tooltipText = `Today (${weekday}): Next watering due`;
+          }
+          // Today + Past Watering
+          else if (isTodayAndWatered) {
+            tooltipText = `Today (${weekday}): Already watered`;
+          }
+          // Past days
+          else if (i < today) {
+            tooltipText = `${weekday}, ${Math.abs(daysFromToday)} days ago: ${watered ? 'Watered' : 'Not watered'}`;
+          }
+          // Just Today
+          else if (isToday) {
+            tooltipText = `Today (${weekday})`;
+          }
+          // Just Next Watering
+          else if (isNextWatering) {
+            tooltipText = `${weekday}, ${daysFromToday} days from now: Next watering`;
+          }
+          // Future days
+          else {
+            tooltipText = `${weekday}, ${daysFromToday} days from now`;
+          }
           
           return (
             <Tooltip key={i} title={tooltipText}>
-              <div style={style} />
+              <div style={style}>
+                {/* Add water droplet icon ONLY for "needs watering today" case */}
+                {isTodayAndNextWatering && <WaterDropletIcon />}
+              </div>
             </Tooltip>
           );
         })}
@@ -503,6 +601,9 @@ export default function PlantOverview() {
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px 16px' }}>
+      {/* Add style element for animation */}
+      <style>{pulseAnimation}</style>
+      
       <Title level={2} style={{ marginBottom: 24, fontFamily: "'Quicksand', sans-serif", fontWeight: 700, color: 'var(--color-text-primary)' }}>Plant Overview</Title>
       
       {loading ? (
