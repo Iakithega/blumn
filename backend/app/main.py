@@ -39,13 +39,20 @@ if IS_PRODUCTION:
     # The exported site will contain an "_next" folder with JS chunks + assets
     next_export_static = os.path.join(EXPORT_DIR, "_next")
 
+    # Plant images directory
+    plant_images_dir = os.path.join(EXPORT_DIR, "plant_images")
+
     # Mount the entire export directory at "/" **after** API routes are defined via a catch-all.
     # We still mount the _next folder explicitly so that hashed asset URLs are served efficiently.
     if os.path.exists(next_export_static):
         app.mount("/_next", StaticFiles(directory=next_export_static), name="next-export-static")
 
-    # Mount any additional public/static assets (images, CSS, etc.) that might exist in the export dir
+    # Mount exported root at /static for CSS/JS chunks created by Next build (e.g. "assets/..." when using Tailwind etc.)
     app.mount("/static", StaticFiles(directory=EXPORT_DIR), name="frontend-static")
+
+    # Mount plant images directory explicitly so <img src="/plant_images/foo.jpg" /> works
+    if os.path.exists(plant_images_dir):
+        app.mount("/plant_images", StaticFiles(directory=plant_images_dir), name="plant-images")
 
     # Make the export directory path accessible to other handlers
     FRONTEND_EXPORT_DIR = EXPORT_DIR
@@ -226,14 +233,14 @@ def request_is_browser(request=None):
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str, request: Request):
     # Skip API routes (this check should be robust)
-    if full_path.startswith("api/") or full_path.startswith("_next/") or full_path.startswith("static/"):
+    if (full_path.startswith("api/") or full_path.startswith("_next/") or
+        full_path.startswith("static/") or full_path.startswith("plant_images/")):
         # Let FastAPI handle these if they are actual API routes or static file requests
         # If they are not matched by other routes, FastAPI will return its own 404
         # For this specific case, if it starts with "api/", it's an API call, so return 404.
         if full_path.startswith("api/"):
              return {"detail": "API route not found"}, 404 # Return a proper 404 for API
         # For _next and static, StaticFiles middleware should handle it. If it reaches here, something is wrong.
-        # However, it's better to let StaticFiles do its job or FastAPI's default 404.
         # This return statement will likely not be hit if StaticFiles is configured correctly.
         return {"detail": "Resource not found"}, 404
 
