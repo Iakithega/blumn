@@ -151,15 +151,6 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
             position: 'relative'
           };
           
-          // Today's marker (darker brown outline)
-          if (isToday) {
-            style = {
-              ...style,
-              border: '2px solid var(--color-today-border)',
-              backgroundColor: 'var(--color-not-watered)'
-            };
-          }
-          
           // Next watering marker (green outline with different style for forecast)
           if (i === nextWatering) {
             style = {
@@ -167,6 +158,15 @@ function WateringHistory({ history, today, nextWatering, weekdays }: {
               border: '2px solid var(--color-watered)',
               backgroundColor: 'var(--color-not-watered)',
               borderStyle: 'dashed', // Dashed border for forecast
+            };
+          }
+          
+          // Today's marker (darker brown outline)
+          if (isToday) {
+            style = {
+              ...style,
+              border: '2px solid var(--color-today-border)',
+              backgroundColor: 'var(--color-not-watered)'
             };
           }
           
