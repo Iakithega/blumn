@@ -2,7 +2,7 @@
 # Set production mode
 export PRODUCTION=true
 
-# Build frontend
+# Build frontend with static export
 cd frontend && npm run build
 cd ..
 

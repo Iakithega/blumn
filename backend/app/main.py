@@ -33,23 +33,21 @@ IS_PRODUCTION = os.environ.get("PRODUCTION", "False").lower() == "true"
 
 # If in production, serve frontend static files
 if IS_PRODUCTION:
-    # Mount Next.js static files and assets
-    next_static_dir = os.path.join(BASE_DIR, "frontend", ".next", "static")
-    if os.path.exists(next_static_dir):
-        app.mount("/_next/static", StaticFiles(directory=next_static_dir), name="next-static")
-    
-    # Mount public directory
-    public_dir = os.path.join(BASE_DIR, "frontend", "public")
-    if os.path.exists(public_dir):
-        app.mount("/public", StaticFiles(directory=public_dir), name="public")
+    # Mount Next.js static export directories
+    next_out_dir = os.path.join(BASE_DIR, "frontend", "out")
+    if os.path.exists(next_out_dir):
+        # Mount the out directory at the root
+        app.mount("/_next", StaticFiles(directory=os.path.join(next_out_dir, "_next")), name="next-static")
+        app.mount("/assets", StaticFiles(directory=os.path.join(next_out_dir, "assets")), name="assets")
+        # Mount any other static directories that Next.js creates
 
 @app.get("/")
 async def root():
-    # In production, serve the frontend
+    # In production, serve the frontend static HTML
     if IS_PRODUCTION:
-        frontend_index = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "index.html")
-        if os.path.exists(frontend_index):
-            return FileResponse(frontend_index)
+        index_html = os.path.join(BASE_DIR, "frontend", "out", "index.html")
+        if os.path.exists(index_html):
+            return FileResponse(index_html)
     
     # Default API response
     return {"message": "Welcome to Blumn Plant Care Tracker"}
@@ -182,21 +180,47 @@ def calculate_watering_periodicity(plant_name: str) -> float:
     return None  # If we couldn't calculate periodicity
 
 @app.get("/plants/overview")
-async def plants_overview():
-    # In production mode, serve the Next.js page for this route
-    if IS_PRODUCTION:
-        # For Next.js App Router, check for the HTML file at the correct location
-        html_file = os.path.join(BASE_DIR, "frontend", ".next", "server", "app", "plants", "overview", "page.html")
-        if os.path.exists(html_file):
-            return FileResponse(html_file)
+async def plants_overview(request: Request):
+    # In production mode, try to serve the static HTML
+    if IS_PRODUCTION and request_is_browser(request):
+        html_path = os.path.join(BASE_DIR, "frontend", "out", "plants", "overview.html")
+        if os.path.exists(html_path):
+            return FileResponse(html_path)
+        
+        # Check alternative path
+        alt_path = os.path.join(BASE_DIR, "frontend", "out", "plants", "overview", "index.html")
+        if os.path.exists(alt_path):
+            return FileResponse(alt_path)
+        
+        # Fallback to home page
+        index_html = os.path.join(BASE_DIR, "frontend", "out", "index.html")
+        if os.path.exists(index_html):
+            return FileResponse(index_html)
     
-    # Fallback to API data response
+    # For API requests, return the data
     return {
         "plants": [
             {"name": "Plant 1", "status": "Needs water", "days_since_watering": 7},
             {"name": "Plant 2", "status": "Healthy", "days_since_watering": 2}
         ]
     }
+
+def request_is_browser(request=None):
+    """Helper function to determine if request is from a browser"""
+    if request is None:
+        # Try to get request from current function frame
+        import inspect
+        frame = inspect.currentframe()
+        while frame:
+            if 'request' in frame.f_locals:
+                request = frame.f_locals['request']
+                break
+            frame = frame.f_back
+    
+    if request and hasattr(request, 'headers'):
+        accept = request.headers.get('accept', '')
+        return 'text/html' in accept
+    return False
 
 # Catch-all route for serving Next.js frontend pages in production
 @app.get("/{full_path:path}")
@@ -205,20 +229,17 @@ async def serve_frontend(full_path: str, request: Request):
     if full_path.startswith("api/"):
         return {"detail": "Not Found"}
     
-    # In production mode, try to serve Next.js pages
+    # In production mode, try to serve Next.js static HTML files
     if IS_PRODUCTION:
-        # For Next.js App Router, the structure is different
-        # Try different possible paths based on App Router conventions
-        possible_paths = [
-            # App Router HTML files
-            os.path.join(BASE_DIR, "frontend", ".next", "server", "app", full_path, "page.html"),
-            # Handle root index page
-            os.path.join(BASE_DIR, "frontend", ".next", "server", "app", "page.html") if full_path == "" else None,
-        ]
-        
-        for path in possible_paths:
-            if path and os.path.exists(path):
-                return FileResponse(path)
+        # Check if the file exists in the 'out' directory
+        html_path = os.path.join(BASE_DIR, "frontend", "out", f"{full_path}.html")
+        if os.path.exists(html_path):
+            return FileResponse(html_path)
+            
+        # Check if it's a directory with an index.html
+        dir_index_path = os.path.join(BASE_DIR, "frontend", "out", full_path, "index.html")
+        if os.path.exists(dir_index_path):
+            return FileResponse(dir_index_path)
     
     # Default fallback for any route not found
     return {"detail": "Not Found"} 
