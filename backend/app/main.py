@@ -37,7 +37,7 @@ if IS_PRODUCTION:
     frontend_dir = os.path.join(BASE_DIR, "frontend", ".next")
     static_dir = os.path.join(BASE_DIR, "frontend", "public")
     if os.path.exists(frontend_dir):
-        app.mount("/_next", StaticFiles(directory=os.path.join(frontend_dir, "_next")), name="next-static")
+        app.mount("/_next", StaticFiles(directory=frontend_dir), name="next-static")
     if os.path.exists(static_dir):
         app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
