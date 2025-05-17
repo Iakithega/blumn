@@ -34,22 +34,39 @@ IS_PRODUCTION = os.environ.get("PRODUCTION", "False").lower() == "true"
 # If in production, serve frontend static files
 if IS_PRODUCTION:
     # Check if Next.js output directory exists
-    frontend_dir = os.path.join(BASE_DIR, "frontend", ".next")
-    static_dir = os.path.join(BASE_DIR, "frontend", "public")
-    if os.path.exists(frontend_dir):
-        app.mount("/_next", StaticFiles(directory=frontend_dir), name="next-static")
-    if os.path.exists(static_dir):
-        app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    next_static_dir = os.path.join(BASE_DIR, "frontend", ".next", "static")
+    public_dir = os.path.join(BASE_DIR, "frontend", "public") # Renamed for clarity
+    
+    if os.path.exists(next_static_dir):
+        app.mount("/_next", StaticFiles(directory=next_static_dir), name="next-static")
+    if os.path.exists(public_dir): # Use public_dir here
+        app.mount("/static", StaticFiles(directory=public_dir), name="public-static") # Use public_dir here
 
 @app.get("/")
-async def root():
-    # In production, serve the frontend
+async def root(request: Request): # Add request parameter
+    # In production, serve the frontend's main index.html
     if IS_PRODUCTION:
-        frontend_index = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "index.html")
-        if os.path.exists(frontend_index):
-            return FileResponse(frontend_index)
-    
-    # Default API response
+        # For Next.js, the entry point is usually within the .next/server/pages or .next/server/app directory
+        # A common pattern is to serve the index.html and let client-side routing take over.
+        # Let's try a more general path for Next.js 13+ App Router or Pages Router
+        
+        # Path for Pages Router (typical)
+        index_html_path = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "index.html")
+
+        # Fallback for App Router (might be different, often a root layout)
+        # For simplicity, we'll stick to a common index.html for now.
+        # If using App router and this fails, this path needs to point to the main entry HTML.
+        
+        if os.path.exists(index_html_path):
+            return FileResponse(index_html_path)
+        else:
+            # If specific index.html isn't found, it might indicate an issue with build or paths.
+            # Log this or handle appropriately. For now, falling back to API message.
+            # In a real scenario, you'd want to ensure this index.html always exists.
+            print(f"Warning: Frontend index.html not found at {index_html_path}")
+            return {"message": "Welcome to Blumn Plant Care Tracker - Frontend not found"}
+
+    # Default API response if not production or index.html not found
     return {"message": "Welcome to Blumn Plant Care Tracker"}
 
 @app.get("/api/plants")
@@ -210,24 +227,46 @@ def request_is_browser(request=None):
 # Catch-all route for serving Next.js frontend pages in production
 @app.get("/{full_path:path}")
 async def serve_frontend(full_path: str, request: Request):
-    # Skip API routes
-    if full_path.startswith("api/"):
-        return {"detail": "Not Found"}
-    
+    # Skip API routes (this check should be robust)
+    if full_path.startswith("api/") or full_path.startswith("_next/") or full_path.startswith("static/"):
+        # Let FastAPI handle these if they are actual API routes or static file requests
+        # If they are not matched by other routes, FastAPI will return its own 404
+        # For this specific case, if it starts with "api/", it's an API call, so return 404.
+        if full_path.startswith("api/"):
+             return {"detail": "API route not found"}, 404 # Return a proper 404 for API
+        # For _next and static, StaticFiles middleware should handle it. If it reaches here, something is wrong.
+        # However, it's better to let StaticFiles do its job or FastAPI's default 404.
+        # This return statement will likely not be hit if StaticFiles is configured correctly.
+        return {"detail": "Resource not found"}, 404
+
+
     if IS_PRODUCTION:
-        # Try to serve the specific page first
-        page_path = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", f"{full_path}.html")
-        index_path = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", full_path, "index.html")
+        # For any non-API path, serve the main index.html from Next.js.
+        # Next.js client-side router will handle the specific page (e.g., /plants/overview)
         
-        if os.path.exists(page_path):
-            return FileResponse(page_path)
-        elif os.path.exists(index_path):
-            return FileResponse(index_path)
+        # Path for Pages Router (typical index.html)
+        index_html_path = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "index.html")
+
+        # Alternative path if Next.js build places a generic index.html in a different location
+        # For example, some build configurations might output to `frontend/out/index.html` for static export
+        # Check your `next.config.js` if `output: 'export'` is used.
+        # If `output: 'export'` is used, the path would be `os.path.join(BASE_DIR, "frontend", "out", "index.html")`
+        # and for specific pages like /plants/overview, it would be `frontend/out/plants/overview.html`
+
+        # The `full_path` for /plants/overview will be "plants/overview"
+        # If Next.js `output: 'export'` is used, you'd serve `frontend/out/{full_path}.html` or `frontend/out/{full_path}/index.html`
+        # And for the root, `frontend/out/index.html`
+
+        # For a standard Next.js SSR/SSG setup (not `output: 'export'`), serving the root index.html 
+        # from the .next/server/pages directory is a common approach for the catch-all.
         
-        # If not found, try to serve the index page as a fallback
-        index_html = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "index.html")
-        if os.path.exists(index_html):
-            return FileResponse(index_html)
-    
-    # Default fallback for any route not found
-    return {"detail": "Not Found"} 
+        if os.path.exists(index_html_path):
+            return FileResponse(index_html_path, media_type="text/html")
+        else:
+            # This indicates a critical issue: the main entry point for the frontend is missing.
+            print(f"CRITICAL: Frontend entry point 'index.html' not found at {index_html_path}")
+            return {"detail": "Frontend entry point not found. Check deployment."}, 500
+            
+    # If not IS_PRODUCTION, or if somehow the index.html was not served (should not happen if IS_PRODUCTION and file exists)
+    # This fallback is mostly for non-production or misconfiguration.
+    return {"detail": "Not Found - Ensure IS_PRODUCTION is set and frontend is built correctly."} 
