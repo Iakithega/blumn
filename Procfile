@@ -1,1 +1,1 @@
-web: npm run build && npm run start & gunicorn -k uvicorn.workers.UvicornWorker backend.app.main:app 
+web: bash start.sh 
