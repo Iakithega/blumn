@@ -179,7 +179,7 @@ def calculate_watering_periodicity(plant_name: str) -> float:
     
     return None  # If we couldn't calculate periodicity
 
-@app.get("/plants/overview")
+@app.get("/api/plants/overview")
 async def plants_overview(request: Request):
     """API endpoint for plants overview"""
     # Return API data - frontend will handle the presentation
@@ -213,6 +213,21 @@ async def serve_frontend(full_path: str, request: Request):
     # Skip API routes
     if full_path.startswith("api/"):
         return {"detail": "Not Found"}
+    
+    if IS_PRODUCTION:
+        # Try to serve the specific page first
+        page_path = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", f"{full_path}.html")
+        index_path = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", full_path, "index.html")
+        
+        if os.path.exists(page_path):
+            return FileResponse(page_path)
+        elif os.path.exists(index_path):
+            return FileResponse(index_path)
+        
+        # If not found, try to serve the index page as a fallback
+        index_html = os.path.join(BASE_DIR, "frontend", ".next", "server", "pages", "index.html")
+        if os.path.exists(index_html):
+            return FileResponse(index_html)
     
     # Default fallback for any route not found
     return {"detail": "Not Found"} 
