@@ -189,9 +189,11 @@ function generateWateringHistory(
     // Get the most recent watering date
     const lastWatering = wateringDates[wateringDates.length - 1];
 
-    // Derive the scheduled next-watering date by adding the periodicity
+    // Round fractional cycles (e.g. 4.7 → 5 days) so we work with whole-day offsets
+    const roundedPeriodicity = Math.round(periodicity);
+
     const nextWateringDate = new Date(lastWatering);
-    nextWateringDate.setDate(nextWateringDate.getDate() + periodicity);
+    nextWateringDate.setDate(nextWateringDate.getDate() + roundedPeriodicity);
 
     // Determine the signed distance (in days) between today and that date
     const oneDayMs = 1000 * 60 * 60 * 24;
