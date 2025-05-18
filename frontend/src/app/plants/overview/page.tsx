@@ -92,6 +92,7 @@ function generateWateringHistory(
   fertilized: boolean[], 
   today: number, 
   nextWatering: number, 
+  isMissedWatering: boolean,
   weekdays: string[]
 } {
   const pastDays = 30; // Show last 30 days
@@ -109,6 +110,7 @@ function generateWateringHistory(
   
   // Default value for next watering (if we can't calculate it)
   let nextWateringIndex = -1;
+  let isMissedWatering = false;
   
   // Get today's date
   const today = new Date();
@@ -124,7 +126,7 @@ function generateWateringHistory(
     weekdays[i] = weekdayLetters[date.getDay()];
   }
   
-  if (!plantHistory) return { history, fertilized, today: todayIndex, nextWatering: nextWateringIndex, weekdays };
+  if (!plantHistory) return { history, fertilized, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays };
 
   // Special handling for days_since_watering = 0 (watered today)
   // If the plant was watered today (according to the API), mark today as watered
@@ -186,21 +188,30 @@ function generateWateringHistory(
   if (wateringDates.length > 0 && periodicity > 0) {
     // Get the most recent watering date
     const lastWatering = wateringDates[wateringDates.length - 1];
-    
-    // Calculate days since last watering
-    const daysSinceLastWatering = Math.floor((today.getTime() - lastWatering.getTime()) / (1000 * 60 * 60 * 24));
-    
-    // Calculate days until next watering
-    const daysUntilNextWatering = daysSinceLastWatering % periodicity === 0 ? 
-      0 : Math.ceil(periodicity - (daysSinceLastWatering % periodicity));
-    
-    // If next watering is within our future window, mark it
-    if (daysUntilNextWatering <= futureDays) {
-      nextWateringIndex = todayIndex + daysUntilNextWatering;
+
+    // Derive the scheduled next-watering date by adding the periodicity
+    const nextWateringDate = new Date(lastWatering);
+    nextWateringDate.setDate(nextWateringDate.getDate() + periodicity);
+
+    // Determine the signed distance (in days) between today and that date
+    const oneDayMs = 1000 * 60 * 60 * 24;
+    const daysUntilNextWatering = Math.floor(
+      (nextWateringDate.getTime() - today.getTime()) / oneDayMs
+    );
+
+    // Compute the index of that scheduled day within the history/future window
+    nextWateringIndex = todayIndex + daysUntilNextWatering;
+
+    // Flag if the watering was missed (scheduled day lies strictly in the past)
+    isMissedWatering = daysUntilNextWatering < 0;
+
+    // Only keep the index if it actually falls inside the visualised window
+    if (nextWateringIndex < 0 || nextWateringIndex >= history.length) {
+      nextWateringIndex = -1; // hidden – outside our 30-past/10-future range
     }
   }
   
-  return { history, fertilized, today: todayIndex, nextWatering: nextWateringIndex, weekdays };
+  return { history, fertilized, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays };
 }
 
 // Update the WateringHistory component to show fertilizer indicators
@@ -209,12 +220,14 @@ function WateringHistory({
   fertilized, 
   today, 
   nextWatering, 
+  isMissedWatering,
   weekdays 
 }: { 
   history: boolean[], 
   fertilized: boolean[],
   today: number, 
   nextWatering: number,
+  isMissedWatering: boolean,
   weekdays: string[]
 }) {
   // Find watering events and calculate days between them
@@ -269,7 +282,9 @@ function WateringHistory({
               ...style,
               // Keep a clean background with just the green dashed border
               backgroundColor: 'var(--color-not-watered)',
-              border: '2px dashed var(--color-watered)',
+              border: isMissedWatering ? 
+                '2px dashed #F0C040' : // Yellow for missed watering
+                '2px dashed var(--color-watered)', // Green for due today
               // Keep the pulsing animation
               animation: 'pulse 2s infinite'
             };
@@ -295,7 +310,9 @@ function WateringHistory({
           else if (isNextWatering) {
             style = {
               ...style,
-              border: '2px dashed var(--color-watered)',
+              border: isMissedWatering ? 
+                '2px dashed #F0C040' : // Yellow for missed watering
+                '2px dashed var(--color-watered)', // Green for future watering
               backgroundColor: 'var(--color-not-watered)'
             };
             
@@ -345,7 +362,9 @@ function WateringHistory({
           
           // Today + Next Watering
           if (isTodayAndNextWatering) {
-            tooltipText = `Today (${weekday}): Next watering due`;
+            tooltipText = isMissedWatering ? 
+              `Today (${weekday}): Missed watering!` :
+              `Today (${weekday}): Next watering due`;
           }
           // Today + Past Watering
           else if (isTodayAndWatered) {
@@ -353,7 +372,11 @@ function WateringHistory({
           }
           // Past days
           else if (i < today) {
-            tooltipText = `${weekday}, ${Math.abs(daysFromToday)} days ago: ${watered ? 'Watered' : 'Not watered'}`;
+            if (isNextWatering && isMissedWatering) {
+              tooltipText = `${weekday}, ${Math.abs(daysFromToday)} days ago: Missed watering!`;
+            } else {
+              tooltipText = `${weekday}, ${Math.abs(daysFromToday)} days ago: ${watered ? 'Watered' : 'Not watered'}`;
+            }
           }
           // Just Today
           else if (isToday) {
@@ -372,7 +395,7 @@ function WateringHistory({
             <Tooltip key={i} title={tooltipText}>
               <div style={style}>
                 {/* Add water droplet icon ONLY for "needs watering today" case */}
-                {isTodayAndNextWatering && <WaterDropletIcon />}
+                {isTodayAndNextWatering && !isMissedWatering && <WaterDropletIcon />}
                 
                 {/* Add fertilizer leaf icon if fertilized on this day */}
                 {watered && fertilized[i] && <FertilizerLeafIcon />}
@@ -585,7 +608,7 @@ export default function PlantOverview() {
     const periodicity = periodicities[plant.name] || plant.watering_schedule;
     
     // Get watering history with today and next watering indicators
-    const { history, fertilized, today, nextWatering, weekdays } = generateWateringHistory(
+    const { history, fertilized, today, nextWatering, isMissedWatering, weekdays } = generateWateringHistory(
       plant.name, 
       wateringHistory, 
       plant.days_since_watering,
@@ -650,7 +673,8 @@ export default function PlantOverview() {
                 history={history}
                 fertilized={fertilized}
                 today={today} 
-                nextWatering={nextWatering} 
+                nextWatering={nextWatering}
+                isMissedWatering={isMissedWatering}
                 weekdays={weekdays}
               />
             </div>
