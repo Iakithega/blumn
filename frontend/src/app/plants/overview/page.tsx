@@ -22,16 +22,18 @@ const pulseAnimation = `
 // Water droplet SVG icon for "water today" indicator
 const WaterDropletIcon = () => (
   <svg 
-    width="14" 
-    height="14" 
+    width="100%" 
+    height="100%" 
     viewBox="0 0 24 24" 
     fill="#3498db" 
     style={{ 
       position: 'absolute', 
-      top: '3px', 
-      right: '3px',
-      filter: 'drop-shadow(0px 1px 1px rgba(0,0,0,0.3))',
-      zIndex: 5
+      top: '10%', 
+      right: '10%',
+      width: '60%',           // scale with strip width
+      height: 'auto',
+      zIndex: 5,
+      pointerEvents: 'none'
     }}
   >
     <path d="M12,20A6,6 0 0,1 6,14C6,10 12,3.25 12,3.25C12,3.25 18,10 18,14A6,6 0 0,1 12,20Z" />
@@ -41,23 +43,65 @@ const WaterDropletIcon = () => (
 // Simple centered neon green leaf icon
 const FertilizerLeafIcon = () => (
   <svg 
-    width="18" 
-    height="18" 
+    width="100%" 
+    height="100%" 
     viewBox="0 0 18 18" 
     style={{ 
       position: 'absolute', 
-      bottom: '2px', 
-      right: '2px',
-      filter: 'drop-shadow(0px 1px 1px rgba(0,0,0,0.3))',
-      zIndex: 5
+      bottom: '10%', 
+      right: '10%',
+      width: '70%',          // scale with strip width
+      height: 'auto',
+      zIndex: 5,
+      pointerEvents: 'none'
     }}
   >
-    {/* Single neon green leaf - positioned even higher */}
+    {/* Single neon green leaf */}
     <g transform="translate(9, 5) scale(0.6)">
       <path 
         d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z" 
         fill="#7FD34D"
         transform="translate(-12, 0)"
+      />
+    </g>
+  </svg>
+);
+
+// Water spray icon for washing plants
+const WashingSprayIcon = () => (
+  <svg 
+    width="100%" 
+    height="100%" 
+    viewBox="0 0 24 24" 
+    style={{ 
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      width: '80%',          // scale with strip
+      height: 'auto',
+      zIndex: 6,
+      pointerEvents: 'none'
+    }}
+  >
+    {/* Three water droplets - universal washing symbol */}
+    <g>
+      {/* Center/main droplet */}
+      <path 
+        d="M12,3.77L11.25,4.61C11.25,4.61 9.97,6.06 8.68,7.94C7.39,9.82 6,12.07 6,14.23A6,6 0 0,0 12,20.23A6,6 0 0,0 18,14.23C18,12.07 16.61,9.82 15.32,7.94C14.03,6.06 12.75,4.61 12.75,4.61L12,3.77M12,6.9C12.44,7.42 12.84,7.85 13.68,9.07C14.89,10.83 16,13.07 16,14.23C16,16.45 14.22,18.23 12,18.23C9.78,18.23 8,16.45 8,14.23C8,13.07 9.11,10.83 10.32,9.07C11.16,7.85 11.56,7.42 12,6.9Z" 
+        fill="#FFFFFF"
+      />
+      {/* Left droplet */}
+      <path 
+        d="M7,2.77L6.25,3.61C6.25,3.61 4.97,5.06 3.68,6.94C2.39,8.82 1,11.07 1,13.23A6,6 0 0,0 7,19.23A6,6 0 0,0 13,13.23C13,11.07 11.61,8.82 10.32,6.94C9.03,5.06 7.75,3.61 7.75,3.61L7,2.77M7,5.9C7.44,6.42 7.84,6.85 8.68,8.07C9.89,9.83 11,12.07 11,13.23C11,15.45 9.22,17.23 7,17.23C4.78,17.23 3,15.45 3,13.23C3,12.07 4.11,9.83 5.32,8.07C6.16,6.85 6.56,6.42 7,5.9Z" 
+        fill="#FFFFFF"
+        transform="scale(0.7) translate(0, 2)"
+      />
+      {/* Right droplet */}
+      <path 
+        d="M17,2.77L16.25,3.61C16.25,3.61 14.97,5.06 13.68,6.94C12.39,8.82 11,11.07 11,13.23A6,6 0 0,0 17,19.23A6,6 0 0,0 23,13.23C23,11.07 21.61,8.82 20.32,6.94C19.03,5.06 17.75,3.61 17.75,3.61L17,2.77M17,5.9C17.44,6.42 17.84,6.85 18.68,8.07C19.89,9.83 21,12.07 21,13.23C21,15.45 19.22,17.23 17,17.23C14.78,17.23 13,15.45 13,13.23C13,12.07 14.11,9.83 15.32,8.07C16.16,6.85 16.56,6.42 17,5.9Z" 
+        fill="#FFFFFF"
+        transform="scale(0.7) translate(8, 2)"
       />
     </g>
   </svg>
@@ -74,14 +118,15 @@ interface Plant {
   fertilizing_schedule: number;
 }
 
-// Update the interfaces to include fertilizing history
+// Update the interfaces to include washing history
 interface WateringHistoryData {
   plant_name: string;
   watering_dates: string[]; // Array of dates when the plant was watered
   fertilizing_dates: string[]; // Array of dates when the plant was fertilized
+  washing_dates: string[]; // Array of dates when the plant was washed
 }
 
-// Update the generateWateringHistory function to track fertilizing events
+// Update the generateWateringHistory function to track washing events
 function generateWateringHistory(
   plantName: string, 
   wateringHistory: WateringHistoryData[], 
@@ -90,6 +135,7 @@ function generateWateringHistory(
 ): {
   history: boolean[], 
   fertilized: boolean[], 
+  washed: boolean[],
   today: number, 
   nextWatering: number, 
   isMissedWatering: boolean,
@@ -100,6 +146,7 @@ function generateWateringHistory(
   const totalDays = pastDays + futureDays;
   const history: boolean[] = Array(totalDays).fill(false);
   const fertilized: boolean[] = Array(totalDays).fill(false); // Track fertilizing events
+  const washed: boolean[] = Array(totalDays).fill(false); // Track washing events
   const weekdays: string[] = Array(totalDays).fill('');
   
   // Find watering history for this specific plant
@@ -126,7 +173,7 @@ function generateWateringHistory(
     weekdays[i] = weekdayLetters[date.getDay()];
   }
   
-  if (!plantHistory) return { history, fertilized, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays };
+  if (!plantHistory) return { history, fertilized, washed, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays };
 
   // Special handling for days_since_watering = 0 (watered today)
   // If the plant was watered today (according to the API), mark today as watered
@@ -146,9 +193,16 @@ function generateWateringHistory(
     return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
   }) : [];
   
+  // Convert washing dates to Date objects (if available)
+  const washingDates = plantHistory.washing_dates ? plantHistory.washing_dates.map(dateStr => {
+    const parts = dateStr.split('.');
+    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+  }) : [];
+  
   // Sort dates in ascending order
   wateringDates.sort((a, b) => a.getTime() - b.getTime());
   fertilizingDates.sort((a, b) => a.getTime() - b.getTime());
+  washingDates.sort((a, b) => a.getTime() - b.getTime());
   
   // Check if today's date is in the watering dates list
   const wateredToday = plantHistory.watering_dates.includes(todayStr);
@@ -180,6 +234,17 @@ function generateWateringHistory(
       
       if (fertilizedOnThisDay) {
         fertilized[i] = true;
+      }
+      
+      // Check if also washed on this date
+      const washedOnThisDay = washingDates.some(washDate => 
+        washDate.getDate() === date.getDate() && 
+        washDate.getMonth() === date.getMonth() && 
+        washDate.getFullYear() === date.getFullYear()
+      );
+      
+      if (washedOnThisDay) {
+        washed[i] = true;
       }
     }
   }
@@ -213,13 +278,26 @@ function generateWateringHistory(
     }
   }
   
-  return { history, fertilized, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays };
+  // Debug: Check if we have any washing dates
+  if (washingDates.length > 0) {
+    console.log(`Plant ${plantName} has ${washingDates.length} washing dates`);
+    console.log(`Washing dates for ${plantName}:`, washingDates);
+    // Check which days are marked as washed in the visualization
+    const washedDays = washed.reduce((acc, isWashed, index) => {
+      if (isWashed) acc.push(index);
+      return acc;
+    }, [] as number[]);
+    console.log(`Washed days in visualization for ${plantName}:`, washedDays);
+  }
+  
+  return { history, fertilized, washed, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays };
 }
 
-// Update the WateringHistory component to show fertilizer indicators
+// Update the WateringHistory component to show washing indicators
 function WateringHistory({ 
   history, 
   fertilized, 
+  washed,
   today, 
   nextWatering, 
   isMissedWatering,
@@ -227,6 +305,7 @@ function WateringHistory({
 }: { 
   history: boolean[], 
   fertilized: boolean[],
+  washed: boolean[],
   today: number, 
   nextWatering: number,
   isMissedWatering: boolean,
@@ -273,7 +352,8 @@ function WateringHistory({
             flexGrow: 1,
             flexBasis: 0,
             border: 'none',
-            position: 'relative'
+            position: 'relative',
+            overflow: 'hidden'          // clip icon shadows and keep them inside
           };
           
           // Apply appropriate style based on combinations
@@ -401,6 +481,9 @@ function WateringHistory({
                 
                 {/* Add fertilizer leaf icon if fertilized on this day */}
                 {watered && fertilized[i] && <FertilizerLeafIcon />}
+                
+                {/* Add washing spray icon if the plant was washed on this day */}
+                {watered && washed[i] && <WashingSprayIcon />}
               </div>
             </Tooltip>
           );
@@ -558,7 +641,7 @@ export default function PlantOverview() {
       .then(data => {
         if (data.status === 'success') {
           // Process the data to extract watering and fertilizing dates for each plant
-          const plantWateringMap: Record<string, {watering: string[], fertilizing: string[]}> = {};
+          const plantWateringMap: Record<string, {watering: string[], fertilizing: string[], washing: string[]}> = {};
           
           data.data.forEach((entry: any) => {
             const plantName = entry['plant name'];
@@ -566,10 +649,11 @@ export default function PlantOverview() {
             const daysWithoutWater = entry['days without water'];
             const waterEntry = entry.water;
             const fertilizerEntry = entry.fertilizer;
+            const washEntry = entry.wash;
             
             if (plantName && date) {
               if (!plantWateringMap[plantName]) {
-                plantWateringMap[plantName] = {watering: [], fertilizing: []};
+                plantWateringMap[plantName] = {watering: [], fertilizing: [], washing: []};
               }
               
               // Check if this row indicates a watering event
@@ -586,6 +670,11 @@ export default function PlantOverview() {
               if (fertilizerEntry) {
                 plantWateringMap[plantName].fertilizing.push(date);
               }
+              
+              // Check if this row indicates a washing event
+              if (washEntry) {
+                plantWateringMap[plantName].washing.push(date);
+              }
             }
           });
           
@@ -593,8 +682,19 @@ export default function PlantOverview() {
           const wateringHistoryData = Object.entries(plantWateringMap).map(([plant_name, data]) => ({
             plant_name,
             watering_dates: data.watering,
-            fertilizing_dates: data.fertilizing
+            fertilizing_dates: data.fertilizing,
+            washing_dates: data.washing
           }));
+          
+          // Debug: Check if we have any washing dates in our data
+          const hasWashing = wateringHistoryData.some(plant => plant.washing_dates && plant.washing_dates.length > 0);
+          console.log('Plants with washing history:', hasWashing);
+          if (hasWashing) {
+            const plantsWithWashing = wateringHistoryData
+              .filter(plant => plant.washing_dates && plant.washing_dates.length > 0)
+              .map(plant => ({ name: plant.plant_name, washDates: plant.washing_dates }));
+            console.log('Washing data:', plantsWithWashing);
+          }
           
           setWateringHistory(wateringHistoryData);
         }
@@ -610,7 +710,7 @@ export default function PlantOverview() {
     const periodicity = periodicities[plant.name] || plant.watering_schedule;
     
     // Get watering history with today and next watering indicators
-    const { history, fertilized, today, nextWatering, isMissedWatering, weekdays } = generateWateringHistory(
+    const { history, fertilized, washed, today, nextWatering, isMissedWatering, weekdays } = generateWateringHistory(
       plant.name, 
       wateringHistory, 
       plant.days_since_watering,
@@ -674,6 +774,7 @@ export default function PlantOverview() {
               <WateringHistory 
                 history={history}
                 fertilized={fertilized}
+                washed={washed}
                 today={today} 
                 nextWatering={nextWatering}
                 isMissedWatering={isMissedWatering}
