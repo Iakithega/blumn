@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, CSSProperties } from 'react';
-import { Table, Card, Row, Col, Typography, Tooltip, Divider } from 'antd';
+import { Table, Card, Row, Col, Typography, Tooltip, Divider, Button, Space } from 'antd';
+import { SortAscendingOutlined, SortDescendingOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -600,6 +601,8 @@ export default function PlantOverview() {
   const [loading, setLoading] = useState(true);
   const [periodicities, setPeriodicities] = useState<Record<string, number>>({});
   const [wateringHistory, setWateringHistory] = useState<WateringHistoryData[]>([]);
+  // Add sorting state
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
 
   useEffect(() => {
     // Fetch plants data - using relative URLs instead of hardcoded localhost
@@ -703,6 +706,79 @@ export default function PlantOverview() {
         console.error("Error fetching plant data for history:", error);
       });
   }, []);
+
+  // Calculate watering need score for sorting
+  const calculateWateringNeedScore = (plant: Plant) => {
+    // Use the periodicity if available, otherwise use the watering schedule
+    const periodicity = periodicities[plant.name] || plant.watering_schedule;
+    
+    // Check if the plant was watered today based on watering history
+    let wateredToday = plant.days_since_watering === 0;
+    
+    // Check watering history for this plant
+    const plantHistory = wateringHistory.find(h => h.plant_name === plant.name);
+    const today = new Date();
+    const todayStr = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getFullYear()}`;
+    
+    // Check if this plant has today's date in its watering dates
+    if (!wateredToday && plantHistory) {
+      wateredToday = plantHistory.watering_dates.includes(todayStr);
+    }
+    
+    // Check if this is the first watering (only one date in history and it's today)
+    const isFirstWatering = plantHistory && 
+                           plantHistory.watering_dates.length === 1 && 
+                           plantHistory.watering_dates.includes(todayStr);
+    
+    // If never watered, highest priority
+    if (plant.days_since_watering === null) return 999;
+    
+    // If watered today, lowest priority (whether first time or not)
+    if (wateredToday) return -1;
+    
+    // Calculate days until next watering (negative if overdue)
+    const daysUntilNextWatering = periodicity - plant.days_since_watering;
+    
+    // Return a score where:
+    // - Overdue plants (negative days) have the highest priority (200+)
+    // - Plants due today (0 days) have next priority (100)
+    // - Plants with upcoming watering have lower priority based on days remaining
+    if (daysUntilNextWatering < 0) {
+      // Overdue plants - most urgent (the more negative, the more urgent)
+      return 200 + Math.abs(daysUntilNextWatering);
+    } else if (daysUntilNextWatering === 0) {
+      // Due today
+      return 100;
+    } else {
+      // Not yet due - less urgent the more days remaining
+      return 99 - Math.min(daysUntilNextWatering, 99);
+    }
+  };
+
+  // Sort plants based on watering need
+  const sortPlants = () => {
+    if (!sortOrder) return plants; // Return unsorted if no sort order is set
+    
+    return [...plants].sort((a, b) => {
+      const scoreA = calculateWateringNeedScore(a);
+      const scoreB = calculateWateringNeedScore(b);
+      
+      // For descending order, plants with higher need (higher score) come first
+      // For ascending order, plants with lower need (lower score) come first
+      return sortOrder === 'desc' ? scoreB - scoreA : scoreA - scoreB;
+    });
+  };
+  
+  // Toggle sort order
+  const toggleSort = () => {
+    if (sortOrder === null) {
+      setSortOrder('desc'); // First click: sort most urgent first
+    } else if (sortOrder === 'desc') {
+      setSortOrder('asc'); // Second click: sort least urgent first
+    } else {
+      setSortOrder(null); // Third click: back to original order
+    }
+  };
 
   // Custom render function for each plant card
   const renderPlantCard = (plant: Plant) => {
@@ -822,7 +898,21 @@ export default function PlantOverview() {
       {/* Add style element for animation */}
       <style>{pulseAnimation}</style>
       
-      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Quicksand', sans-serif", fontWeight: 700, color: 'var(--color-text-primary)' }}>Plants Overview</Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <Title level={2} style={{ margin: 0, fontFamily: "'Quicksand', sans-serif", fontWeight: 700, color: 'var(--color-text-primary)' }}>Plants Overview</Title>
+        
+        {/* Sorting controls */}
+        <Space>
+          <Text>Sort by watering need:</Text>
+          <Button 
+            type={sortOrder ? "primary" : "default"}
+            onClick={toggleSort}
+            icon={sortOrder === 'asc' ? <SortAscendingOutlined /> : <SortDescendingOutlined />}
+          >
+            {sortOrder === 'desc' ? 'Most Urgent First' : sortOrder === 'asc' ? 'Least Urgent First' : 'Sort'}
+          </Button>
+        </Space>
+      </div>
       
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
@@ -830,7 +920,7 @@ export default function PlantOverview() {
         </div>
       ) : (
         <div>
-          {plants.map(renderPlantCard)}
+          {sortPlants().map(renderPlantCard)}
         </div>
       )}
     </div>
