@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useState, CSSProperties, useMemo } from 'react';
 import { Table, Card, Row, Col, Typography, Tooltip, Divider, Button } from 'antd';
+import { ArrowUpOutlined, ArrowDownOutlined, FilterOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -601,12 +602,21 @@ function formatDaysAgo(days: number | null): string {
   return `${days} days ago`;
 }
 
+// Define sort states
+type WateringSortState = 'default' | 'urgent' | 'leastUrgent';
+
+// Define a type for plants with sorting keys
+interface PlantWithSortKey extends Plant {
+  isMissedWatering: boolean;
+  actualDaysUntilNextWatering: number | null;
+}
+
 export default function PlantOverview() {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [periodicities, setPeriodicities] = useState<Record<string, number>>({});
   const [wateringHistory, setWateringHistory] = useState<WateringHistoryData[]>([]);
-  const [sortByWateringNeed, setSortByWateringNeed] = useState(false);
+  const [wateringSortState, setWateringSortState] = useState<WateringSortState>('default');
 
   useEffect(() => {
     // Fetch plants data - using relative URLs instead of hardcoded localhost
@@ -713,12 +723,8 @@ export default function PlantOverview() {
 
   // Memoized and sorted list of plants
   const displayedPlants = useMemo(() => {
-    if (!sortByWateringNeed) {
-      return plants;
-    }
-
     // Create a new array with an additional sorting key for each plant
-    const plantsWithSortKey = plants.map(plant => {
+    const plantsWithSortKey: PlantWithSortKey[] = plants.map(plant => {
       const periodicity = periodicities[plant.name] || plant.watering_schedule;
       const { isMissedWatering, actualDaysUntilNextWatering } = generateWateringHistory(
         plant.name,
@@ -729,27 +735,46 @@ export default function PlantOverview() {
       return { ...plant, isMissedWatering, actualDaysUntilNextWatering };
     });
 
-    return plantsWithSortKey.sort((a, b) => {
-      // Rule 1: Missed watering comes first
-      if (a.isMissedWatering && !b.isMissedWatering) return -1;
-      if (!a.isMissedWatering && b.isMissedWatering) return 1;
+    if (wateringSortState === 'default') {
+      return plantsWithSortKey; // Or just `plants` if you don't need sort keys for default display enhancements
+    }
 
-      // Rule 2: Sort by actualDaysUntilNextWatering (ascending)
-      // null values (no watering schedule) go to the bottom
-      if (a.actualDaysUntilNextWatering === null && b.actualDaysUntilNextWatering !== null) return 1;
-      if (a.actualDaysUntilNextWatering !== null && b.actualDaysUntilNextWatering === null) return -1;
-      if (a.actualDaysUntilNextWatering === null && b.actualDaysUntilNextWatering === null) return 0;
-      
-      // Non-null comparison
-      if (a.actualDaysUntilNextWatering! < b.actualDaysUntilNextWatering!) return -1;
-      if (a.actualDaysUntilNextWatering! > b.actualDaysUntilNextWatering!) return 1;
-      
-      return 0; // Should not be reached if days are different, but good practice
+    return [...plantsWithSortKey].sort((a, b) => { // Sort a copy
+      if (wateringSortState === 'urgent') {
+        // Rule 1: Missed watering comes first
+        if (a.isMissedWatering && !b.isMissedWatering) return -1;
+        if (!a.isMissedWatering && b.isMissedWatering) return 1;
+
+        // Rule 2: Sort by actualDaysUntilNextWatering (ascending for urgent)
+        // null values (no watering schedule) go to the bottom for urgent sort
+        if (a.actualDaysUntilNextWatering === null && b.actualDaysUntilNextWatering !== null) return 1;
+        if (a.actualDaysUntilNextWatering !== null && b.actualDaysUntilNextWatering === null) return -1;
+        if (a.actualDaysUntilNextWatering === null && b.actualDaysUntilNextWatering === null) return 0;
+        
+        if (a.actualDaysUntilNextWatering! < b.actualDaysUntilNextWatering!) return -1;
+        if (a.actualDaysUntilNextWatering! > b.actualDaysUntilNextWatering!) return 1;
+      } else if (wateringSortState === 'leastUrgent') {
+        // Rule 1: Missed watering goes to the very bottom for least urgent
+        if (a.isMissedWatering && !b.isMissedWatering) return 1;
+        if (!a.isMissedWatering && b.isMissedWatering) return -1;
+        // If both are missed or both not missed, continue to next rule
+
+        // Rule 2: Sort by actualDaysUntilNextWatering (descending for least urgent)
+        // null values (no watering schedule) go after defined schedules but before missed
+        if (a.actualDaysUntilNextWatering === null && b.actualDaysUntilNextWatering !== null) return 1; 
+        if (a.actualDaysUntilNextWatering !== null && b.actualDaysUntilNextWatering === null) return -1;
+        if (a.actualDaysUntilNextWatering === null && b.actualDaysUntilNextWatering === null) return 0;
+
+        // Both are not null here for actualDaysUntilNextWatering
+        if (a.actualDaysUntilNextWatering! > b.actualDaysUntilNextWatering!) return -1; // Larger days (less urgent) comes first
+        if (a.actualDaysUntilNextWatering! < b.actualDaysUntilNextWatering!) return 1;
+      }
+      return 0;
     });
-  }, [plants, sortByWateringNeed, periodicities, wateringHistory]);
+  }, [plants, wateringSortState, periodicities, wateringHistory]);
 
   // Custom render function for each plant card
-  const renderPlantCard = (plant: Plant) => {
+  const renderPlantCard = (plant: PlantWithSortKey) => {
     // Get the calculated periodicity or fall back to the default watering schedule
     const periodicity = periodicities[plant.name] || plant.watering_schedule;
     
@@ -880,10 +905,23 @@ export default function PlantOverview() {
       {/* Sorting Toggle Button */} 
       <div style={{ marginBottom: 24, textAlign: 'right' }}>
         <Button 
-          type={sortByWateringNeed ? "primary" : "default"}
-          onClick={() => setSortByWateringNeed(!sortByWateringNeed)}
+          type={wateringSortState !== 'default' ? "primary" : "default"}
+          onClick={() => {
+            if (wateringSortState === 'default') {
+              setWateringSortState('urgent');
+            } else if (wateringSortState === 'urgent') {
+              setWateringSortState('leastUrgent');
+            } else {
+              setWateringSortState('default');
+            }
+          }}
+          icon={
+            wateringSortState === 'urgent' ? <ArrowUpOutlined /> :
+            wateringSortState === 'leastUrgent' ? <ArrowDownOutlined /> :
+            <FilterOutlined />
+          }
         >
-          {sortByWateringNeed ? "Disable" : "Enable"} Watering Need Sorting
+          Watering Need
         </Button>
       </div>
       
