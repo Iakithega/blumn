@@ -69,7 +69,7 @@ const FertilizerLeafIcon = () => (
 );
 
 // Water spray icon for washing plants
-const WashingSprayIcon = () => (
+const WashingSprayIcon = ({ fillColor }: { fillColor?: string }) => (
   <svg 
     width="100%" 
     height="100%" 
@@ -90,18 +90,18 @@ const WashingSprayIcon = () => (
       {/* Center/main droplet */}
       <path 
         d="M12,3.77L11.25,4.61C11.25,4.61 9.97,6.06 8.68,7.94C7.39,9.82 6,12.07 6,14.23A6,6 0 0,0 12,20.23A6,6 0 0,0 18,14.23C18,12.07 16.61,9.82 15.32,7.94C14.03,6.06 12.75,4.61 12.75,4.61L12,3.77M12,6.9C12.44,7.42 12.84,7.85 13.68,9.07C14.89,10.83 16,13.07 16,14.23C16,16.45 14.22,18.23 12,18.23C9.78,18.23 8,16.45 8,14.23C8,13.07 9.11,10.83 10.32,9.07C11.16,7.85 11.56,7.42 12,6.9Z" 
-        fill="#FFFFFF"
+        fill={fillColor || '#FAFAFA'} // Default to very light grey if no prop passed
       />
       {/* Left droplet */}
       <path 
         d="M7,2.77L6.25,3.61C6.25,3.61 4.97,5.06 3.68,6.94C2.39,8.82 1,11.07 1,13.23A6,6 0 0,0 7,19.23A6,6 0 0,0 13,13.23C13,11.07 11.61,8.82 10.32,6.94C9.03,5.06 7.75,3.61 7.75,3.61L7,2.77M7,5.9C7.44,6.42 7.84,6.85 8.68,8.07C9.89,9.83 11,12.07 11,13.23C11,15.45 9.22,17.23 7,17.23C4.78,17.23 3,15.45 3,13.23C3,12.07 4.11,9.83 5.32,8.07C6.16,6.85 6.56,6.42 7,5.9Z" 
-        fill="#FFFFFF"
+        fill={fillColor || '#FAFAFA'} // Default to very light grey
         transform="scale(0.7) translate(0, 2)"
       />
       {/* Right droplet */}
       <path 
         d="M17,2.77L16.25,3.61C16.25,3.61 14.97,5.06 13.68,6.94C12.39,8.82 11,11.07 11,13.23A6,6 0 0,0 17,19.23A6,6 0 0,0 23,13.23C23,11.07 21.61,8.82 20.32,6.94C19.03,5.06 17.75,3.61 17.75,3.61L17,2.77M17,5.9C17.44,6.42 17.84,6.85 18.68,8.07C19.89,9.83 21,12.07 21,13.23C21,15.45 19.22,17.23 17,17.23C14.78,17.23 13,15.45 13,13.23C13,12.07 14.11,9.83 15.32,8.07C16.16,6.85 16.56,6.42 17,5.9Z" 
-        fill="#FFFFFF"
+        fill={fillColor || '#FAFAFA'} // Default to very light grey
         transform="scale(0.7) translate(8, 2)"
       />
     </g>
@@ -241,17 +241,17 @@ function generateWateringHistory(
       if (fertilizedOnThisDay) {
         fertilized[i] = true;
       }
-      
-      // Check if also washed on this date
-      const washedOnThisDay = washingDates.some(washDate => 
-        washDate.getDate() === date.getDate() && 
-        washDate.getMonth() === date.getMonth() && 
-        washDate.getFullYear() === date.getFullYear()
-      );
-      
-      if (washedOnThisDay) {
-        washed[i] = true;
-      }
+    }
+    
+    // Check if washed on this date (independent of watering)
+    const washedOnThisDay = washingDates.some(washDate => 
+      washDate.getDate() === date.getDate() && 
+      washDate.getMonth() === date.getMonth() && 
+      washDate.getFullYear() === date.getFullYear()
+    );
+    
+    if (washedOnThisDay) {
+      washed[i] = true;
     }
   }
   
@@ -490,7 +490,7 @@ function WateringHistory({
                 {watered && fertilized[i] && <FertilizerLeafIcon />}
                 
                 {/* Add washing spray icon if the plant was washed on this day */}
-                {watered && washed[i] && <WashingSprayIcon />}
+                {washed[i] && <WashingSprayIcon fillColor={watered ? '#FAFAFA' : '#3498db'} />}
               </div>
             </Tooltip>
           );
