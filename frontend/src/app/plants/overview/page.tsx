@@ -1,6 +1,7 @@
 'use client';
-import React, { useEffect, useState, CSSProperties } from 'react';
-import { Table, Card, Row, Col, Typography, Tooltip, Divider } from 'antd';
+import React, { useEffect, useState, CSSProperties, useMemo } from 'react';
+import { Table, Card, Row, Col, Typography, Tooltip, Divider, Button } from 'antd';
+import { ArrowUpOutlined, ArrowDownOutlined, FilterOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
@@ -126,21 +127,25 @@ interface WateringHistoryData {
   washing_dates: string[]; // Array of dates when the plant was washed
 }
 
+// Update the return type of generateWateringHistory
+interface WateringHistoryResult {
+  history: boolean[], 
+  fertilized: boolean[], 
+  washed: boolean[],
+  today: number, 
+  nextWatering: number, // This is an index
+  isMissedWatering: boolean,
+  weekdays: string[],
+  actualDaysUntilNextWatering: number | null; // Added for sorting
+}
+
 // Update the generateWateringHistory function to track washing events
 function generateWateringHistory(
   plantName: string, 
   wateringHistory: WateringHistoryData[], 
   daysAgo: number | null, 
   periodicity: number
-): {
-  history: boolean[], 
-  fertilized: boolean[], 
-  washed: boolean[],
-  today: number, 
-  nextWatering: number, 
-  isMissedWatering: boolean,
-  weekdays: string[]
-} {
+): WateringHistoryResult { // Update return type here
   const pastDays = 30; // Show last 30 days
   const futureDays = 10; // Show next 10 days
   const totalDays = pastDays + futureDays;
@@ -158,6 +163,7 @@ function generateWateringHistory(
   // Default value for next watering (if we can't calculate it)
   let nextWateringIndex = -1;
   let isMissedWatering = false;
+  let actualDaysUntilNextWatering: number | null = null; // Initialize
   
   // Get today's date
   const today = new Date();
@@ -173,7 +179,7 @@ function generateWateringHistory(
     weekdays[i] = weekdayLetters[date.getDay()];
   }
   
-  if (!plantHistory) return { history, fertilized, washed, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays };
+  if (!plantHistory) return { history, fertilized, washed, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays, actualDaysUntilNextWatering };
 
   // Special handling for days_since_watering = 0 (watered today)
   // If the plant was watered today (according to the API), mark today as watered
@@ -262,15 +268,16 @@ function generateWateringHistory(
 
     // Determine the signed distance (in days) between today and that date
     const oneDayMs = 1000 * 60 * 60 * 24;
-    const daysUntilNextWatering = Math.floor(
+    const daysUntilNextWateringCalc = Math.floor( // Renamed to avoid conflict if 'daysUntilNextWatering' is used elsewhere for a different purpose
       (nextWateringDate.getTime() - today.getTime()) / oneDayMs
     );
+    actualDaysUntilNextWatering = daysUntilNextWateringCalc; // Store the raw value
 
     // Compute the index of that scheduled day within the history/future window
-    nextWateringIndex = todayIndex + daysUntilNextWatering;
+    nextWateringIndex = todayIndex + daysUntilNextWateringCalc;
 
     // Flag if the watering was missed (scheduled day lies strictly in the past)
-    isMissedWatering = daysUntilNextWatering < 0;
+    isMissedWatering = daysUntilNextWateringCalc < 0;
 
     // Only keep the index if it actually falls inside the visualised window
     if (nextWateringIndex < 0 || nextWateringIndex >= history.length) {
@@ -290,7 +297,7 @@ function generateWateringHistory(
     console.log(`Washed days in visualization for ${plantName}:`, washedDays);
   }
   
-  return { history, fertilized, washed, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays };
+  return { history, fertilized, washed, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays, actualDaysUntilNextWatering };
 }
 
 // Update the WateringHistory component to show washing indicators
@@ -595,11 +602,21 @@ function formatDaysAgo(days: number | null): string {
   return `${days} days ago`;
 }
 
+// Define sort states
+type WateringSortState = 'default' | 'urgent' | 'leastUrgent';
+
+// Define a type for plants with sorting keys
+interface PlantWithSortKey extends Plant {
+  isMissedWatering: boolean;
+  actualDaysUntilNextWatering: number | null;
+}
+
 export default function PlantOverview() {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [periodicities, setPeriodicities] = useState<Record<string, number>>({});
   const [wateringHistory, setWateringHistory] = useState<WateringHistoryData[]>([]);
+  const [wateringSortState, setWateringSortState] = useState<WateringSortState>('default');
 
   useEffect(() => {
     // Fetch plants data - using relative URLs instead of hardcoded localhost
@@ -704,13 +721,74 @@ export default function PlantOverview() {
       });
   }, []);
 
+  // Memoized and sorted list of plants
+  const displayedPlants = useMemo(() => {
+    // Create a new array with an additional sorting key for each plant
+    const plantsWithSortKey: PlantWithSortKey[] = plants.map(plant => {
+      const periodicity = periodicities[plant.name] || plant.watering_schedule;
+      const { isMissedWatering, actualDaysUntilNextWatering } = generateWateringHistory(
+        plant.name,
+        wateringHistory,
+        plant.days_since_watering,
+        periodicity
+      );
+      return { ...plant, isMissedWatering, actualDaysUntilNextWatering };
+    });
+
+    if (wateringSortState === 'default') {
+      return plantsWithSortKey; // Or just `plants` if you don't need sort keys for default display enhancements
+    }
+
+    return [...plantsWithSortKey].sort((a, b) => { // Sort a copy
+      if (wateringSortState === 'urgent') {
+        // Rule 1: Missed watering comes first
+        if (a.isMissedWatering && !b.isMissedWatering) return -1;
+        if (!a.isMissedWatering && b.isMissedWatering) return 1;
+
+        // Rule 2: Sort by actualDaysUntilNextWatering (ascending for urgent)
+        // null values (no watering schedule) go to the bottom for urgent sort
+        if (a.actualDaysUntilNextWatering === null && b.actualDaysUntilNextWatering !== null) return 1;
+        if (a.actualDaysUntilNextWatering !== null && b.actualDaysUntilNextWatering === null) return -1;
+        if (a.actualDaysUntilNextWatering === null && b.actualDaysUntilNextWatering === null) return 0;
+        
+        if (a.actualDaysUntilNextWatering! < b.actualDaysUntilNextWatering!) return -1;
+        if (a.actualDaysUntilNextWatering! > b.actualDaysUntilNextWatering!) return 1;
+      } else if (wateringSortState === 'leastUrgent') {
+        // Rule 1: Missed watering goes to the very bottom for least urgent
+        if (a.isMissedWatering && !b.isMissedWatering) return 1;
+        if (!a.isMissedWatering && b.isMissedWatering) return -1;
+        // If both are missed or both not missed, continue to next rule
+
+        // Rule 2: Sort by actualDaysUntilNextWatering (descending for least urgent)
+        // null values (no watering schedule) go after defined schedules but before missed
+        if (a.actualDaysUntilNextWatering === null && b.actualDaysUntilNextWatering !== null) return 1; 
+        if (a.actualDaysUntilNextWatering !== null && b.actualDaysUntilNextWatering === null) return -1;
+        if (a.actualDaysUntilNextWatering === null && b.actualDaysUntilNextWatering === null) return 0;
+
+        // Both are not null here for actualDaysUntilNextWatering
+        if (a.actualDaysUntilNextWatering! > b.actualDaysUntilNextWatering!) return -1; // Larger days (less urgent) comes first
+        if (a.actualDaysUntilNextWatering! < b.actualDaysUntilNextWatering!) return 1;
+      }
+      return 0;
+    });
+  }, [plants, wateringSortState, periodicities, wateringHistory]);
+
   // Custom render function for each plant card
-  const renderPlantCard = (plant: Plant) => {
+  const renderPlantCard = (plant: PlantWithSortKey) => {
     // Get the calculated periodicity or fall back to the default watering schedule
     const periodicity = periodicities[plant.name] || plant.watering_schedule;
     
     // Get watering history with today and next watering indicators
-    const { history, fertilized, washed, today, nextWatering, isMissedWatering, weekdays } = generateWateringHistory(
+    const { 
+      history, 
+      fertilized, 
+      washed, 
+      today, 
+      nextWatering, 
+      isMissedWatering, 
+      weekdays,
+      actualDaysUntilNextWatering
+    } = generateWateringHistory(
       plant.name, 
       wateringHistory, 
       plant.days_since_watering,
@@ -822,7 +900,30 @@ export default function PlantOverview() {
       {/* Add style element for animation */}
       <style>{pulseAnimation}</style>
       
-      <Title level={2} style={{ marginBottom: 24, fontFamily: "'Quicksand', sans-serif", fontWeight: 700, color: 'var(--color-text-primary)' }}>Plants Overview</Title>
+      <Title level={2} style={{ marginBottom: 12, fontFamily: "'Quicksand', sans-serif", fontWeight: 700, color: 'var(--color-text-primary)' }}>Plants Overview</Title>
+      
+      {/* Sorting Toggle Button */} 
+      <div style={{ marginBottom: 24, textAlign: 'right' }}>
+        <Button 
+          type={wateringSortState !== 'default' ? "primary" : "default"}
+          onClick={() => {
+            if (wateringSortState === 'default') {
+              setWateringSortState('urgent');
+            } else if (wateringSortState === 'urgent') {
+              setWateringSortState('leastUrgent');
+            } else {
+              setWateringSortState('default');
+            }
+          }}
+          icon={
+            wateringSortState === 'urgent' ? <ArrowUpOutlined /> :
+            wateringSortState === 'leastUrgent' ? <ArrowDownOutlined /> :
+            <FilterOutlined />
+          }
+        >
+          Watering Need
+        </Button>
+      </div>
       
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
@@ -830,7 +931,7 @@ export default function PlantOverview() {
         </div>
       ) : (
         <div>
-          {plants.map(renderPlantCard)}
+          {displayedPlants.map(renderPlantCard)}
         </div>
       )}
     </div>
