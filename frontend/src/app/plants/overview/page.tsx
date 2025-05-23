@@ -9,10 +9,10 @@ const { Title, Text } = Typography;
 const pulseAnimation = `
   @keyframes pulse {
     0% {
-      box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.5);
+      box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); /* Increased opacity */
     }
     70% {
-      box-shadow: 0 0 0 6px rgba(52, 152, 219, 0);
+      box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); /* Increased spread */
     }
     100% {
       box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
@@ -125,6 +125,7 @@ interface WateringHistoryData {
   watering_dates: string[]; // Array of dates when the plant was watered
   fertilizing_dates: string[]; // Array of dates when the plant was fertilized
   washing_dates: string[]; // Array of dates when the plant was washed
+  neemoil_dates: string[]; // Array of dates when the plant was treated with neem oil
 }
 
 // Update the return type of generateWateringHistory
@@ -132,6 +133,7 @@ interface WateringHistoryResult {
   history: boolean[], 
   fertilized: boolean[], 
   washed: boolean[],
+  neemoiled: boolean[], // Added for neem oil treatment
   today: number, 
   nextWatering: number, // This is an index
   isMissedWatering: boolean,
@@ -152,6 +154,7 @@ function generateWateringHistory(
   const history: boolean[] = Array(totalDays).fill(false);
   const fertilized: boolean[] = Array(totalDays).fill(false); // Track fertilizing events
   const washed: boolean[] = Array(totalDays).fill(false); // Track washing events
+  const neemoiled: boolean[] = Array(totalDays).fill(false); // Track neem oil events
   const weekdays: string[] = Array(totalDays).fill('');
   
   // Find watering history for this specific plant
@@ -179,7 +182,7 @@ function generateWateringHistory(
     weekdays[i] = weekdayLetters[date.getDay()];
   }
   
-  if (!plantHistory) return { history, fertilized, washed, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays, actualDaysUntilNextWatering };
+  if (!plantHistory) return { history, fertilized, washed, neemoiled, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays, actualDaysUntilNextWatering };
 
   // Special handling for days_since_watering = 0 (watered today)
   // If the plant was watered today (according to the API), mark today as watered
@@ -205,10 +208,17 @@ function generateWateringHistory(
     return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
   }) : [];
   
+  // Convert neem oil dates to Date objects (if available)
+  const neemoilDates = plantHistory.neemoil_dates ? plantHistory.neemoil_dates.map(dateStr => {
+    const parts = dateStr.split('.');
+    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+  }) : [];
+  
   // Sort dates in ascending order
   wateringDates.sort((a, b) => a.getTime() - b.getTime());
   fertilizingDates.sort((a, b) => a.getTime() - b.getTime());
   washingDates.sort((a, b) => a.getTime() - b.getTime());
+  neemoilDates.sort((a, b) => a.getTime() - b.getTime());
   
   // Check if today's date is in the watering dates list
   const wateredToday = plantHistory.watering_dates.includes(todayStr);
@@ -252,6 +262,17 @@ function generateWateringHistory(
     
     if (washedOnThisDay) {
       washed[i] = true;
+    }
+    
+    // Check if treated with neem oil on this date (independent of watering/washing)
+    const neemoiledOnThisDay = neemoilDates.some(neemoilDate =>
+      neemoilDate.getDate() === date.getDate() &&
+      neemoilDate.getMonth() === date.getMonth() &&
+      neemoilDate.getFullYear() === date.getFullYear()
+    );
+
+    if (neemoiledOnThisDay) {
+      neemoiled[i] = true;
     }
   }
   
@@ -297,7 +318,7 @@ function generateWateringHistory(
     console.log(`Washed days in visualization for ${plantName}:`, washedDays);
   }
   
-  return { history, fertilized, washed, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays, actualDaysUntilNextWatering };
+  return { history, fertilized, washed, neemoiled, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays, actualDaysUntilNextWatering };
 }
 
 // Update the WateringHistory component to show washing indicators
@@ -305,6 +326,7 @@ function WateringHistory({
   history, 
   fertilized, 
   washed,
+  neemoiled, // Added neemoiled
   today, 
   nextWatering, 
   isMissedWatering,
@@ -313,6 +335,7 @@ function WateringHistory({
   history: boolean[], 
   fertilized: boolean[],
   washed: boolean[],
+  neemoiled: boolean[], // Added neemoiled
   today: number, 
   nextWatering: number,
   isMissedWatering: boolean,
@@ -375,7 +398,7 @@ function WateringHistory({
                 '2px dashed #F0C040' : // Yellow for missed watering
                 '2px dashed var(--color-watered)', // Green for due today
               // Keep the pulsing animation
-              animation: 'pulse 2s infinite'
+              animation: 'pulse 1.5s infinite'
             };
           }
           // Case 2: Today + Past Watering (user watered today)
@@ -483,14 +506,17 @@ function WateringHistory({
           return (
             <Tooltip key={i} title={tooltipText}>
               <div style={style}>
-                {/* Add water droplet icon ONLY for "needs watering today" case */}
-                {isTodayAndNextWatering && !isMissedWatering && <WaterDropletIcon />}
+                {/* Add water droplet icon ONLY for "needs watering today" case - REMOVED as per user request */}
+                {/* {isTodayAndNextWatering && !isMissedWatering && <WaterDropletIcon />} */}
                 
                 {/* Add fertilizer leaf icon if fertilized on this day */}
                 {watered && fertilized[i] && <FertilizerLeafIcon />}
                 
                 {/* Add washing spray icon if the plant was washed on this day */}
-                {washed[i] && <WashingSprayIcon fillColor={watered ? '#FAFAFA' : '#3498db'} />}
+                {washed[i] && !neemoiled[i] && <WashingSprayIcon fillColor={watered ? '#FAFAFA' : '#3498db'} />}
+
+                {/* Show brown WashingSprayIcon if the plant was treated with neem oil on this day */}
+                {neemoiled[i] && <WashingSprayIcon fillColor={watered ? '#A0522D' : '#8B4513'} />} {/* Sienna if watered, SaddleBrown if not for Neem Oil */}
               </div>
             </Tooltip>
           );
@@ -658,7 +684,7 @@ export default function PlantOverview() {
       .then(data => {
         if (data.status === 'success') {
           // Process the data to extract watering and fertilizing dates for each plant
-          const plantWateringMap: Record<string, {watering: string[], fertilizing: string[], washing: string[]}> = {};
+          const plantWateringMap: Record<string, {watering: string[], fertilizing: string[], washing: string[], neemoil: string[]}> = {};
           
           data.data.forEach((entry: any) => {
             const plantName = entry['plant name'];
@@ -667,10 +693,11 @@ export default function PlantOverview() {
             const waterEntry = entry.water;
             const fertilizerEntry = entry.fertilizer;
             const washEntry = entry.wash;
+            const neemoilEntry = entry.neemoil; // Added for neem oil
             
             if (plantName && date) {
               if (!plantWateringMap[plantName]) {
-                plantWateringMap[plantName] = {watering: [], fertilizing: [], washing: []};
+                plantWateringMap[plantName] = {watering: [], fertilizing: [], washing: [], neemoil: []}; // Added neemoil
               }
               
               // Check if this row indicates a watering event
@@ -692,6 +719,11 @@ export default function PlantOverview() {
               if (washEntry) {
                 plantWateringMap[plantName].washing.push(date);
               }
+              
+              // Check if this row indicates a neem oil event
+              if (neemoilEntry) {
+                plantWateringMap[plantName].neemoil.push(date);
+              }
             }
           });
           
@@ -700,7 +732,8 @@ export default function PlantOverview() {
             plant_name,
             watering_dates: data.watering,
             fertilizing_dates: data.fertilizing,
-            washing_dates: data.washing
+            washing_dates: data.washing,
+            neemoil_dates: data.neemoil // Added neemoil
           }));
           
           // Debug: Check if we have any washing dates in our data
@@ -783,6 +816,7 @@ export default function PlantOverview() {
       history, 
       fertilized, 
       washed, 
+      neemoiled, // Added neemoiled
       today, 
       nextWatering, 
       isMissedWatering, 
@@ -853,6 +887,7 @@ export default function PlantOverview() {
                 history={history}
                 fertilized={fertilized}
                 washed={washed}
+                neemoiled={neemoiled} // Added neemoiled
                 today={today} 
                 nextWatering={nextWatering}
                 isMissedWatering={isMissedWatering}
@@ -888,6 +923,15 @@ export default function PlantOverview() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <div style={{ width: 16, height: 16, border: '2px dashed var(--color-watered)', borderRadius: 6, backgroundImage: 'linear-gradient(45deg, var(--color-not-watered) 25%, #E0E0E0 25%, #E0E0E0 50%, var(--color-not-watered) 50%, var(--color-not-watered) 75%, #E0E0E0 75%, #E0E0E0 100%)', backgroundSize: '10px 10px' }}></div>
               <Text type="secondary" style={{ fontSize: 12 }}>Next Watering</Text>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 16, height: 16, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                   {/* Brown WashingSprayIcon for Neem Oil legend */}
+                  <path d="M12,3.77L11.25,4.61C11.25,4.61 9.97,6.06 8.68,7.94C7.39,9.82 6,12.07 6,14.23A6,6 0 0,0 12,20.23A6,6 0 0,0 18,14.23C18,12.07 16.61,9.82 15.32,7.94C14.03,6.06 12.75,4.61 12.75,4.61L12,3.77M12,6.9C12.44,7.42 12.84,7.85 13.68,9.07C14.89,10.83 16,13.07 16,14.23C16,16.45 14.22,18.23 12,18.23C9.78,18.23 8,16.45 8,14.23C8,13.07 9.11,10.83 10.32,9.07C11.16,7.85 11.56,7.42 12,6.9Z" fill="#8B4513"/>
+                </svg>
+              </div>
+              <Text type="secondary" style={{ fontSize: 12, lineHeight: 1 }}>Neem Oil</Text>
             </div>
           </div>
         </div>

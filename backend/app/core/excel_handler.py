@@ -17,7 +17,7 @@ class ExcelHandler:
             wb = openpyxl.Workbook()
             ws = wb.active
             # Add headers
-            headers = ["date", "plant name", "days without water", "water", "fertilizer", "wash", "size"]
+            headers = ["date", "plant name", "days without water", "water", "fertilizer", "wash", "neemoil", "size"]
             for col, header in enumerate(headers, 1):
                 ws.cell(row=1, column=col, value=header)
             wb.save(self.file_path)
@@ -84,6 +84,7 @@ class ExcelHandler:
                         "",  # water
                         "",  # fertilizer
                         "",  # wash
+                        "",  # neemoil
                         ""   # size
                     ])
                 # Add separator row
