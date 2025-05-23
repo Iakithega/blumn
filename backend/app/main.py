@@ -60,7 +60,7 @@ else:
     FRONTEND_EXPORT_DIR = None
 
 @app.get("/")
-async def root(request: Request): # Add request parameter
+async def root(request: Request):
     # In production, serve the frontend's main index.html
     if IS_PRODUCTION and FRONTEND_EXPORT_DIR:
         index_html_path = os.path.join(FRONTEND_EXPORT_DIR, "index.html")
