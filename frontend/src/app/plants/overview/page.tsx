@@ -593,7 +593,7 @@ function WateringHistory({
 
 // Explicit mapping from normalized plant names to image filenames
 const imageMap: Record<string, string> = {
-  'epipremnum_aureum': 'epipremnum_aureum_1.jpg', 
+  'epipremnum_aureum': 'epipremnum_aureum.jpg', 
   'coffea_arabica': 'coffea_arabica.jpg',
   'philodendron_hedaracium_brasil': 'philodendron_brasil.jpeg',
   'philodendron_scandens_micans': 'philodendron_micans.jpg',
@@ -614,9 +614,17 @@ function getImageSrc(plantName: string) {
     .toLowerCase()
     .replace(/[^a-z0-9 ]/g, '')
     .replace(/\s+/g, '_');
+  
+  console.log('Original plant name:', plantName);
+  console.log('Transformed base:', base);
+  console.log('Image map has this key?', imageMap.hasOwnProperty(base));
+  
   if (imageMap[base]) {
-    return `/plant_images/${imageMap[base]}`;
+    const path = `/plant_images/${imageMap[base]}`;
+    console.log('Returning image path:', path);
+    return path;
   }
+  console.log('Falling back to default.jpg');
   return '/plant_images/default.jpg';
 }
 
