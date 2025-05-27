@@ -593,7 +593,7 @@ function WateringHistory({
 
 // Explicit mapping from normalized plant names to image filenames
 const imageMap: Record<string, string> = {
-  'epipremnum_aureum': 'epipremnum_aureum.jpg',
+  'epipremnum_aureum': 'epipremnum_aureum_1.jpg', 
   'coffea_arabica': 'coffea_arabica.jpg',
   'philodendron_hedaracium_brasil': 'philodendron_brasil.jpeg',
   'philodendron_scandens_micans': 'philodendron_micans.jpg',
