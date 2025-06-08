@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import openpyxl
 from openpyxl.styles import PatternFill, Border, Side
 from dateutil.parser import parse
@@ -122,15 +122,27 @@ class ExcelHandler:
                         last_date = date
         return last_date
 
-    def get_todays_plants(self) -> List[Plant]:
-        """Get all plants with their current care status"""
+    def get_todays_plants(self, *, maintenance: bool = False) -> List[Plant]:
+        """Get all plants with their current care status.
+
+        Args:
+            maintenance: If True, the workbook will be opened in write mode and
+                ``_ensure_dates_exist`` will be executed (which may modify and
+                save the file). Use this sparingly – ideally from a daily
+                maintenance job or right after write operations. For ordinary
+                GET requests, keep this False so the method runs in fast,
+                read-only mode without touching the disk.
+        """
         try:
-            wb = openpyxl.load_workbook(self.file_path, data_only=True)
+            # For normal reads, leverage openpyxl's read-only mode to speed up
+            # parsing and avoid locking the file for writing.
+            wb = self._load_workbook(read_only=not maintenance)
             ws = wb.active
             
-            # Ensure dates exist
-            self._ensure_dates_exist(ws)
-            wb.save(self.file_path)
+            # Run heavy maintenance only when explicitly requested
+            if maintenance:
+                self._ensure_dates_exist(ws)
+                wb.save(self.file_path)
             
             today = datetime.now().date()
             plants = []
@@ -167,14 +179,21 @@ class ExcelHandler:
             print(f"Error in get_todays_plants: {str(e)}")  # Add logging
             raise
     
-    def read_data(self) -> List[Dict[str, Any]]:
-        """Read data from Excel file, ensuring dates exist"""
-        wb = openpyxl.load_workbook(self.file_path, data_only=True)
+    def read_data(self, *, maintenance: bool = False) -> List[Dict[str, Any]]:
+        """Read data from Excel file.
+
+        The optional *maintenance* flag mirrors the one in
+        ``get_todays_plants`` – it triggers the slower, write-enabled path that
+        calls ``_ensure_dates_exist`` and saves the workbook. Keep it False for
+        typical read operations exposed via GET endpoints.
+        """
+        wb = self._load_workbook(read_only=not maintenance)
         ws = wb.active
         
-        # Ensure dates exist
-        self._ensure_dates_exist(ws)
-        wb.save(self.file_path)
+        if maintenance:
+            # Only mutate & save when explicitly asked to.
+            self._ensure_dates_exist(ws)
+            wb.save(self.file_path)
         
         # Read data
         data = []
@@ -242,4 +261,17 @@ class ExcelHandler:
         # Sort by date (oldest first)
         plant_data.sort(key=lambda x: x["date"])
         
-        return plant_data 
+        return plant_data
+    
+    # ---------------------------------------------------------------------
+    # Performance helpers
+    # ---------------------------------------------------------------------
+
+    def _load_workbook(self, *, read_only: bool = False, data_only: bool = True):
+        """Internal helper to load the workbook.
+
+        Set ``read_only=True`` when the caller only needs to read; this avoids
+        the overhead of loading styles and shared strings tables and prevents
+        accidental mutations (which would require saving).
+        """
+        return openpyxl.load_workbook(self.file_path, read_only=read_only, data_only=data_only) 
