@@ -5,11 +5,48 @@ import openpyxl
 from openpyxl.styles import PatternFill, Border, Side
 from dateutil.parser import parse
 from ..models.plant import Plant
+import os
+import time
 
 class ExcelHandler:
     def __init__(self, file_path: str):
         self.file_path = Path(file_path)
         self._ensure_file_exists()
+        
+        # Cache attributes
+        self._cache: Optional[List[Dict[str, Any]]] = None
+        self._cache_timestamp: Optional[float] = None
+        self._file_mtime: Optional[float] = None
+        
+        # Preload cache on initialization
+        self._load_cache()
+    
+    def _load_cache(self):
+        """Load data into cache"""
+        try:
+            self._cache = self._read_data_uncached()
+            self._cache_timestamp = time.time()
+            self._file_mtime = os.path.getmtime(self.file_path)
+        except Exception as e:
+            print(f"Error loading cache: {str(e)}")
+            self._cache = None
+    
+    def _is_cache_valid(self) -> bool:
+        """Check if cache is still valid"""
+        if self._cache is None or self._file_mtime is None:
+            return False
+        
+        try:
+            current_mtime = os.path.getmtime(self.file_path)
+            return current_mtime == self._file_mtime
+        except:
+            return False
+    
+    def _invalidate_cache(self):
+        """Invalidate the cache"""
+        self._cache = None
+        self._cache_timestamp = None
+        self._file_mtime = None
     
     def _ensure_file_exists(self):
         """Ensure the Excel file exists, create if it doesn't"""
@@ -122,38 +159,26 @@ class ExcelHandler:
                         last_date = date
         return last_date
 
-    def get_todays_plants(self, *, maintenance: bool = False) -> List[Plant]:
-        """Get all plants with their current care status.
-
-        Args:
-            maintenance: If True, the workbook will be opened in write mode and
-                ``_ensure_dates_exist`` will be executed (which may modify and
-                save the file). Use this sparingly – ideally from a daily
-                maintenance job or right after write operations. For ordinary
-                GET requests, keep this False so the method runs in fast,
-                read-only mode without touching the disk.
-        """
+    def get_todays_plants(self) -> List[Plant]:
+        """Get all plants with their current care status using cached data"""
         try:
-            # For normal reads, leverage openpyxl's read-only mode to speed up
-            # parsing and avoid locking the file for writing.
-            wb = self._load_workbook(read_only=not maintenance)
-            ws = wb.active
-            
-            # Run heavy maintenance only when explicitly requested
-            if maintenance:
-                self._ensure_dates_exist(ws)
-                wb.save(self.file_path)
+            # Use cached data instead of loading workbook
+            data = self.read_data()  # This will use cache
             
             today = datetime.now().date()
             plants = []
             
-            # Get unique plant names
-            plant_names = self._get_plant_names(ws)
+            # Get unique plant names from cached data
+            plant_names = []
+            for row in data:
+                plant_name = row.get("plant name")
+                if plant_name and plant_name not in plant_names:
+                    plant_names.append(plant_name)
             
             for idx, plant_name in enumerate(plant_names, 1):
-                # Get last care dates
-                last_watered = self._get_last_care_date(ws, plant_name, "water")
-                last_fertilized = self._get_last_care_date(ws, plant_name, "fertilizer")
+                # Get last care dates from cached data
+                last_watered = self._get_last_care_date_from_cache(data, plant_name, "water")
+                last_fertilized = self._get_last_care_date_from_cache(data, plant_name, "fertilizer")
                 
                 # Calculate days since last care
                 days_since_watering = (today - last_watered).days if last_watered else None
@@ -176,24 +201,27 @@ class ExcelHandler:
             
             return plants
         except Exception as e:
-            print(f"Error in get_todays_plants: {str(e)}")  # Add logging
+            print(f"Error in get_todays_plants: {str(e)}")
             raise
     
-    def read_data(self, *, maintenance: bool = False) -> List[Dict[str, Any]]:
-        """Read data from Excel file.
-
-        The optional *maintenance* flag mirrors the one in
-        ``get_todays_plants`` – it triggers the slower, write-enabled path that
-        calls ``_ensure_dates_exist`` and saves the workbook. Keep it False for
-        typical read operations exposed via GET endpoints.
-        """
-        wb = self._load_workbook(read_only=not maintenance)
+    def read_data(self) -> List[Dict[str, Any]]:
+        """Read data from Excel file with caching"""
+        # Check if cache is valid
+        if self._is_cache_valid() and self._cache is not None:
+            return self._cache.copy()  # Return a copy to prevent external modifications
+        
+        # Cache is invalid or doesn't exist, reload
+        self._load_cache()
+        return self._cache.copy() if self._cache is not None else []
+    
+    def _read_data_uncached(self) -> List[Dict[str, Any]]:
+        """Read data from Excel file without caching (internal use)"""
+        wb = openpyxl.load_workbook(self.file_path, data_only=True)
         ws = wb.active
         
-        if maintenance:
-            # Only mutate & save when explicitly asked to.
-            self._ensure_dates_exist(ws)
-            wb.save(self.file_path)
+        # Ensure dates exist
+        self._ensure_dates_exist(ws)
+        wb.save(self.file_path)
         
         # Read data
         data = []
@@ -223,25 +251,24 @@ class ExcelHandler:
             ws.append(row)
         
         wb.save(self.file_path)
+        
+        # Invalidate cache after writing
+        self._invalidate_cache()
     
     def get_plant_history(self, plant_name: str) -> List[Dict[str, Any]]:
         """
         Get all historical entries for a specific plant, ordered by date.
-        This is used for calculating periodicity and other trends.
+        Uses cached data for better performance.
         """
-        wb = openpyxl.load_workbook(self.file_path, data_only=True)
-        ws = wb.active
+        # Use cached data
+        data = self.read_data()
         
-        # Get headers
-        headers = [cell.value for cell in ws[1]]
-        
-        # Get all rows for this plant
+        # Filter for this plant
         plant_data = []
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            row_data = dict(zip(headers, row))
-            if row_data.get("plant name") == plant_name and row_data.get("date"):
+        for row in data:
+            if row.get("plant name") == plant_name and row.get("date"):
                 # Parse date
-                date_value = row_data["date"]
+                date_value = row["date"]
                 if isinstance(date_value, str):
                     try:
                         date_value = datetime.strptime(date_value, "%d.%m.%Y").date()
@@ -255,23 +282,44 @@ class ExcelHandler:
                 else:
                     continue  # Skip if date is missing or invalid
                 
-                row_data["date"] = date_value  # Replace with parsed date
-                plant_data.append(row_data)
+                row_copy = row.copy()
+                row_copy["date"] = date_value  # Replace with parsed date
+                plant_data.append(row_copy)
         
         # Sort by date (oldest first)
         plant_data.sort(key=lambda x: x["date"])
         
         return plant_data
     
-    # ---------------------------------------------------------------------
-    # Performance helpers
-    # ---------------------------------------------------------------------
+    def _get_last_care_date_from_cache(self, data: List[Dict[str, Any]], plant_name: str, care_type: str) -> Optional[datetime]:
+        """Get the last date a plant received care from cached data"""
+        last_date = None
+        
+        for row in data:
+            if row.get("plant name") == plant_name:
+                # Parse date robustly
+                try:
+                    date = None
+                    date_value = row.get("date")
+                    if isinstance(date_value, str):
+                        try:
+                            date = datetime.strptime(date_value, "%d.%m.%Y").date()
+                        except ValueError:
+                            date = parse(date_value).date()
+                    elif isinstance(date_value, datetime):
+                        date = date_value.date()
+                    if not date:
+                        continue
+                except Exception:
+                    continue
 
-    def _load_workbook(self, *, read_only: bool = False, data_only: bool = True):
-        """Internal helper to load the workbook.
-
-        Set ``read_only=True`` when the caller only needs to read; this avoids
-        the overhead of loading styles and shared strings tables and prevents
-        accidental mutations (which would require saving).
-        """
-        return openpyxl.load_workbook(self.file_path, read_only=read_only, data_only=data_only) 
+                if care_type == "water":
+                    days_wo_water = row.get("days without water")
+                    if days_wo_water == 0 or (isinstance(days_wo_water, str) and str(days_wo_water).strip() == "0"):
+                        last_date = date
+                elif care_type == "fertilizer":
+                    fertilizer_value = row.get("fertilizer")
+                    if fertilizer_value and str(fertilizer_value).strip() != "":
+                        last_date = date
+        
+        return last_date 

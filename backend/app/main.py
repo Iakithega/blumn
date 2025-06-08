@@ -116,10 +116,10 @@ async def test_watering_periodicity():
         plants = excel_handler.get_todays_plants()
         results = []
         
-        # Print a header to the console
-        print("\n" + "="*80)
-        print(f"{'PLANT NAME':<30} {'PERIODICITY':<15} {'FIRST RECORD':<15} {'DAYS SINCE':<12} {'EVENTS':<8} {'DEFAULT'}")
-        print("-"*80)
+        # Print a header to the console (commented out for performance)
+        # print("\n" + "="*80)
+        # print(f"{'PLANT NAME':<30} {'PERIODICITY':<15} {'FIRST RECORD':<15} {'DAYS SINCE':<12} {'EVENTS':<8} {'DEFAULT'}")
+        # print("-"*80)
         
         for plant in plants:
             # Calculate periodicity
@@ -138,12 +138,12 @@ async def test_watering_periodicity():
                 if days_wo_water == 0 or (isinstance(days_wo_water, str) and days_wo_water.strip() == "0") or water_entry:
                     watering_events += 1
             
-            # Print to console
-            first_record_str = first_record.strftime("%d.%m.%Y") if first_record else "N/A"
-            periodicity_str = f"{round(periodicity, 1)}" if periodicity is not None else "N/A"
-            days_str = f"{days_since_first_record}" if days_since_first_record is not None else "N/A"
-            
-            print(f"{plant.name:<30} {periodicity_str:<15} {first_record_str:<15} {days_str:<12} {watering_events:<8} {plant.watering_schedule}")
+            # Print to console (commented out for performance)
+            # first_record_str = first_record.strftime("%d.%m.%Y") if first_record else "N/A"
+            # periodicity_str = f"{round(periodicity, 1)}" if periodicity is not None else "N/A"
+            # days_str = f"{days_since_first_record}" if days_since_first_record is not None else "N/A"
+            # 
+            # print(f"{plant.name:<30} {periodicity_str:<15} {first_record_str:<15} {days_str:<12} {watering_events:<8} {plant.watering_schedule}")
             
             # Add to results
             results.append({
@@ -155,8 +155,8 @@ async def test_watering_periodicity():
                 "default_schedule": plant.watering_schedule
             })
         
-        # Print footer
-        print("="*80 + "\n")
+        # Print footer (commented out for performance)
+        # print("="*80 + "\n")
         
         return {"status": "success", "data": results}
     except Exception as e:
