@@ -1,6 +1,6 @@
 'use client';
 import React, { useEffect, useState, CSSProperties, useMemo } from 'react';
-import { Table, Card, Row, Col, Typography, Tooltip, Divider, Button } from 'antd';
+import { Table, Card, Row, Col, Typography, Tooltip, Divider, Button, Tag } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined, FilterOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -649,6 +649,7 @@ export default function PlantOverview() {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [periodicities, setPeriodicities] = useState<Record<string, number>>({});
+  const [calculationMethods, setCalculationMethods] = useState<Record<string, string>>({});
   const [wateringHistory, setWateringHistory] = useState<WateringHistoryData[]>([]);
   const [wateringSortState, setWateringSortState] = useState<WateringSortState>('default');
 
@@ -674,12 +675,15 @@ export default function PlantOverview() {
         if (data.status === 'success') {
           // Create a mapping of plant name to calculated periodicity
           const periodicityMap: Record<string, number> = {};
+          const methodMap: Record<string, string> = {};
           data.data.forEach((item: any) => {
             if (item.calculated_periodicity !== null) {
               periodicityMap[item.plant_name] = item.calculated_periodicity;
+              methodMap[item.plant_name] = item.calculation_method;
             }
           });
           setPeriodicities(periodicityMap);
+          setCalculationMethods(methodMap);
         }
       })
       .catch(error => {
@@ -818,6 +822,7 @@ export default function PlantOverview() {
   const renderPlantCard = (plant: PlantWithSortKey) => {
     // Get the calculated periodicity or fall back to the default watering schedule
     const periodicity = periodicities[plant.name] || plant.watering_schedule;
+    const calculationMethod = calculationMethods[plant.name];
     
     // Get watering history with today and next watering indicators
     const { 
@@ -886,7 +891,27 @@ export default function PlantOverview() {
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
             <Text strong style={{ fontSize: 16, fontFamily: "'Quicksand', sans-serif", color: 'var(--color-text-primary)' }}>Watering History & Forecast</Text>
-            <Text type="secondary" style={{ fontFamily: "'Quicksand', sans-serif" }}>Watering Cycle: {periodicity} days</Text>
+            <div>
+              <Text type="secondary" style={{ fontFamily: "'Quicksand', sans-serif" }}>
+                Watering Cycle: {periodicity} days
+                {calculationMethod && (
+                  <Tooltip title={calculationMethod === 'mean' ? 'Simple average of all watering intervals' : 'Moving average of last 5 watering intervals'}>
+                    <span style={{ 
+                      marginLeft: 4, 
+                      fontSize: '10px', 
+                      opacity: 0.7, 
+                      fontStyle: 'italic',
+                      cursor: 'help',
+                      padding: '1px 4px',
+                      borderRadius: '3px',
+                      backgroundColor: calculationMethod === 'moving_avg' ? 'rgba(24, 144, 255, 0.1)' : 'transparent'
+                    }}>
+                      {calculationMethod === 'mean' ? 'mean' : 'ma 5'}
+                    </span>
+                  </Tooltip>
+                )}
+              </Text>
+            </div>
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center' }}>

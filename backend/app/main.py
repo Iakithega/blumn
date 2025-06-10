@@ -123,7 +123,7 @@ async def test_watering_periodicity():
         
         for plant in plants:
             # Calculate periodicity
-            periodicity = calculate_watering_periodicity(plant.name)
+            periodicity, calculation_method = calculate_watering_periodicity(plant.name)
             
             # Get the first record date for this plant
             plant_history = excel_handler.get_plant_history(plant.name)
@@ -149,6 +149,7 @@ async def test_watering_periodicity():
             results.append({
                 "plant_name": plant.name,
                 "calculated_periodicity": round(periodicity, 1) if periodicity is not None else None,
+                "calculation_method": calculation_method,
                 "first_record_date": first_record.strftime("%d.%m.%Y") if first_record else None,
                 "days_since_first_record": days_since_first_record,
                 "watering_events": watering_events,
@@ -163,19 +164,24 @@ async def test_watering_periodicity():
         print(f"Error: {str(e)}")
         return {"status": "error", "message": str(e), "traceback": str(e.__traceback__)}
 
-def calculate_watering_periodicity(plant_name: str) -> float:
+def calculate_watering_periodicity(plant_name: str) -> tuple:
     """
     Calculate the actual watering periodicity of a plant considering only
     the time between actual watering events.
     
+    For plants with less than 5 watering events, uses a simple average.
+    For plants with 5 or more watering events, uses a moving average of the
+    5 most recent watering intervals.
+    
     Returns:
-        The average days between waterings
+        Tuple: (periodicity_value, calculation_method)
+        where calculation_method is 'mean' or 'moving_avg'
     """
     # Get all rows for this plant, ordered by date
     plant_data = excel_handler.get_plant_history(plant_name)
     
     if not plant_data:
-        return None  # No data available
+        return None, None  # No data available
     
     # Find all watering events (days where days_without_water = 0)
     watering_dates = []
@@ -187,7 +193,7 @@ def calculate_watering_periodicity(plant_name: str) -> float:
     
     if len(watering_dates) <= 1:
         # Not enough data points to calculate periodicity
-        return None
+        return None, None
     
     # Calculate time differences between consecutive waterings
     intervals = []
@@ -197,9 +203,15 @@ def calculate_watering_periodicity(plant_name: str) -> float:
     
     # Calculate average interval
     if intervals:
-        return sum(intervals) / len(intervals)
+        if len(intervals) < 5:
+            # For plants with fewer than 5 watering events, use simple average
+            return sum(intervals) / len(intervals), "mean"
+        else:
+            # For plants with 5 or more watering events, use moving average of last 5 intervals
+            recent_intervals = intervals[-5:]
+            return sum(recent_intervals) / len(recent_intervals), "moving_avg"
     
-    return None  # If we couldn't calculate periodicity
+    return None, None  # If we couldn't calculate periodicity
 
 @app.get("/api/plants/overview")
 async def plants_overview(request: Request):
