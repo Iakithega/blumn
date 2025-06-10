@@ -151,7 +151,9 @@ class ExcelHandler:
 
                 if care_type == "water":
                     days_wo_water = row[2]
-                    if days_wo_water == 0 or (isinstance(days_wo_water, str) and days_wo_water.strip() == "0"):
+                    water_entry = row[3]  # Index 3 is the "water" column
+                    # Check both "days without water" and "water" columns
+                    if days_wo_water == 0 or (isinstance(days_wo_water, str) and days_wo_water.strip() == "0") or water_entry:
                         last_date = date
                 elif care_type == "fertilizer":
                     fertilizer_value = row[4]
@@ -315,7 +317,9 @@ class ExcelHandler:
 
                 if care_type == "water":
                     days_wo_water = row.get("days without water")
-                    if days_wo_water == 0 or (isinstance(days_wo_water, str) and str(days_wo_water).strip() == "0"):
+                    water_entry = row.get("water")  # Get the "water" column value
+                    # Check both "days without water" and "water" columns
+                    if days_wo_water == 0 or (isinstance(days_wo_water, str) and str(days_wo_water).strip() == "0") or water_entry:
                         last_date = date
                 elif care_type == "fertilizer":
                     fertilizer_value = row.get("fertilizer")
