@@ -126,6 +126,7 @@ interface WateringHistoryData {
   fertilizing_dates: string[]; // Array of dates when the plant was fertilized
   washing_dates: string[]; // Array of dates when the plant was washed
   neemoil_dates: string[]; // Array of dates when the plant was treated with neem oil
+  pestmix_dates: string[]; // Array of dates when the plant was treated with pest mix
 }
 
 // Update the return type of generateWateringHistory
@@ -133,7 +134,8 @@ interface WateringHistoryResult {
   history: boolean[], 
   fertilized: boolean[], 
   washed: boolean[],
-  neemoiled: boolean[], // Added for neem oil treatment
+  neemoiled: boolean[], // Existing neem oil treatment
+  pestmixed: boolean[], // Added for pest mix treatment
   today: number, 
   nextWatering: number, // This is an index
   isMissedWatering: boolean,
@@ -155,6 +157,7 @@ function generateWateringHistory(
   const fertilized: boolean[] = Array(totalDays).fill(false); // Track fertilizing events
   const washed: boolean[] = Array(totalDays).fill(false); // Track washing events
   const neemoiled: boolean[] = Array(totalDays).fill(false); // Track neem oil events
+  const pestmixed: boolean[] = Array(totalDays).fill(false); // Track pest mix events
   const weekdays: string[] = Array(totalDays).fill('');
   
   // Find watering history for this specific plant
@@ -182,7 +185,7 @@ function generateWateringHistory(
     weekdays[i] = weekdayLetters[date.getDay()];
   }
   
-  if (!plantHistory) return { history, fertilized, washed, neemoiled, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays, actualDaysUntilNextWatering };
+  if (!plantHistory) return { history, fertilized, washed, neemoiled, pestmixed, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays, actualDaysUntilNextWatering };
 
   // Special handling for days_since_watering = 0 (watered today)
   // If the plant was watered today (according to the API), mark today as watered
@@ -214,11 +217,18 @@ function generateWateringHistory(
     return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
   }) : [];
   
+  // Convert pest mix dates to Date objects (if available)
+  const pestmixDates = plantHistory.pestmix_dates ? plantHistory.pestmix_dates.map(dateStr => {
+    const parts = dateStr.split('.');
+    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+  }) : [];
+  
   // Sort dates in ascending order
   wateringDates.sort((a, b) => a.getTime() - b.getTime());
   fertilizingDates.sort((a, b) => a.getTime() - b.getTime());
   washingDates.sort((a, b) => a.getTime() - b.getTime());
   neemoilDates.sort((a, b) => a.getTime() - b.getTime());
+  pestmixDates.sort((a, b) => a.getTime() - b.getTime());
   
   // Check if today's date is in the watering dates list
   const wateredToday = plantHistory.watering_dates.includes(todayStr);
@@ -274,6 +284,17 @@ function generateWateringHistory(
     if (neemoiledOnThisDay) {
       neemoiled[i] = true;
     }
+
+    // Check if treated with pest mix on this date (independent)
+    const pestmixedOnThisDay = pestmixDates.some(pestmixDate =>
+      pestmixDate.getDate() === date.getDate() &&
+      pestmixDate.getMonth() === date.getMonth() &&
+      pestmixDate.getFullYear() === date.getFullYear()
+    );
+
+    if (pestmixedOnThisDay) {
+      pestmixed[i] = true;
+    }
   }
   
   // Calculate next watering date based on periodicity and most recent watering
@@ -318,7 +339,7 @@ function generateWateringHistory(
     console.log(`Washed days in visualization for ${plantName}:`, washedDays);
   }
   
-  return { history, fertilized, washed, neemoiled, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays, actualDaysUntilNextWatering };
+  return { history, fertilized, washed, neemoiled, pestmixed, today: todayIndex, nextWatering: nextWateringIndex, isMissedWatering, weekdays, actualDaysUntilNextWatering };
 }
 
 // Update the WateringHistory component to show washing indicators
@@ -326,7 +347,8 @@ function WateringHistory({
   history, 
   fertilized, 
   washed,
-  neemoiled, // Added neemoiled
+  neemoiled, // Existing neemoiled
+  pestmixed, // Added pestmixed
   today, 
   nextWatering, 
   isMissedWatering,
@@ -335,7 +357,8 @@ function WateringHistory({
   history: boolean[], 
   fertilized: boolean[],
   washed: boolean[],
-  neemoiled: boolean[], // Added neemoiled
+  neemoiled: boolean[], // Existing neemoiled
+  pestmixed: boolean[], // Added pestmixed
   today: number, 
   nextWatering: number,
   isMissedWatering: boolean,
@@ -516,7 +539,10 @@ function WateringHistory({
                 {washed[i] && !neemoiled[i] && <WashingSprayIcon fillColor={watered ? '#FAFAFA' : '#3498db'} />}
 
                 {/* Show brown WashingSprayIcon if the plant was treated with neem oil on this day */}
-                {neemoiled[i] && <WashingSprayIcon fillColor={watered ? '#A0522D' : '#8B4513'} />} {/* Sienna if watered, SaddleBrown if not for Neem Oil */}
+                {neemoiled[i] && <WashingSprayIcon fillColor={watered ? '#A0522D' : '#8B4513'} />} {/* Neem Oil */}
+
+                {/* Show purple WashingSprayIcon if the plant was treated with pest mix on this day */}
+                {pestmixed[i] && <WashingSprayIcon fillColor={watered ? '#6A0DAD' : '#800080'} />} {/* Pest Mix */}
               </div>
             </Tooltip>
           );
@@ -696,7 +722,7 @@ export default function PlantOverview() {
       .then(data => {
         if (data.status === 'success') {
           // Process the data to extract watering and fertilizing dates for each plant
-          const plantWateringMap: Record<string, {watering: string[], fertilizing: string[], washing: string[], neemoil: string[]}> = {};
+          const plantWateringMap: Record<string, {watering: string[], fertilizing: string[], washing: string[], neemoil: string[], pestmix: string[]}> = {};
           
           data.data.forEach((entry: any) => {
             const plantName = entry['plant name'];
@@ -705,11 +731,12 @@ export default function PlantOverview() {
             const waterEntry = entry.water;
             const fertilizerEntry = entry.fertilizer;
             const washEntry = entry.wash;
-            const neemoilEntry = entry.neemoil; // Added for neem oil
+            const neemoilEntry = entry.neemoil; // Existing neem oil
+            const pestmixEntry = entry.pestmix; // Added pest mix
             
             if (plantName && date) {
               if (!plantWateringMap[plantName]) {
-                plantWateringMap[plantName] = {watering: [], fertilizing: [], washing: [], neemoil: []}; // Added neemoil
+                plantWateringMap[plantName] = {watering: [], fertilizing: [], washing: [], neemoil: [], pestmix: []}; // Added pestmix
               }
               
               // Check if this row indicates a watering event
@@ -736,6 +763,11 @@ export default function PlantOverview() {
               if (neemoilEntry) {
                 plantWateringMap[plantName].neemoil.push(date);
               }
+
+              // Check if this row indicates a pest mix event
+              if (pestmixEntry) {
+                plantWateringMap[plantName].pestmix.push(date);
+              }
             }
           });
           
@@ -745,7 +777,8 @@ export default function PlantOverview() {
             watering_dates: data.watering,
             fertilizing_dates: data.fertilizing,
             washing_dates: data.washing,
-            neemoil_dates: data.neemoil // Added neemoil
+            neemoil_dates: data.neemoil,
+            pestmix_dates: data.pestmix
           }));
           
           // Debug: Check if we have any washing dates in our data
@@ -829,7 +862,8 @@ export default function PlantOverview() {
       history, 
       fertilized, 
       washed, 
-      neemoiled, // Added neemoiled
+      neemoiled, // Existing neemoiled
+      pestmixed, // Added pestmixed
       today, 
       nextWatering, 
       isMissedWatering, 
@@ -920,7 +954,8 @@ export default function PlantOverview() {
                 history={history}
                 fertilized={fertilized}
                 washed={washed}
-                neemoiled={neemoiled} // Added neemoiled
+                neemoiled={neemoiled}
+                pestmixed={pestmixed}
                 today={today} 
                 nextWatering={nextWatering}
                 isMissedWatering={isMissedWatering}
@@ -965,6 +1000,14 @@ export default function PlantOverview() {
                 </svg>
               </div>
               <Text type="secondary" style={{ fontSize: 12, lineHeight: 1 }}>Neem Oil</Text>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 16, height: 16, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                  <path d="M12,3.77L11.25,4.61C11.25,4.61 9.97,6.06 8.68,7.94C7.39,9.82 6,12.07 6,14.23A6,6 0 0,0 12,20.23A6,6 0 0,0 18,14.23C18,12.07 16.61,9.82 15.32,7.94C14.03,6.06 12.75,4.61 12.75,4.61L12,3.77M12,6.9C12.44,7.42 12.84,7.85 13.68,9.07C14.89,10.83 16,13.07 16,14.23C16,16.45 14.22,18.23 12,18.23C9.78,18.23 8,16.45 8,14.23C8,13.07 9.11,10.83 10.32,9.07C11.16,7.85 11.56,7.42 12,6.9Z" fill="#800080"/>
+                </svg>
+              </div>
+              <Text type="secondary" style={{ fontSize: 12, lineHeight: 1 }}>Pest Mix</Text>
             </div>
           </div>
         </div>
