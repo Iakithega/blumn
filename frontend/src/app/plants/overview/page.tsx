@@ -677,7 +677,7 @@ export default function PlantOverview() {
   const [periodicities, setPeriodicities] = useState<Record<string, number>>({});
   const [calculationMethods, setCalculationMethods] = useState<Record<string, string>>({});
   const [wateringHistory, setWateringHistory] = useState<WateringHistoryData[]>([]);
-  const [wateringSortState, setWateringSortState] = useState<WateringSortState>('default');
+  const [wateringSortState, setWateringSortState] = useState<WateringSortState>('urgent');
 
   useEffect(() => {
     // Fetch plants data - using relative URLs instead of hardcoded localhost
