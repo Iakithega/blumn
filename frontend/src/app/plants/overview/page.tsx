@@ -620,7 +620,6 @@ function WateringHistory({
 // Explicit mapping from normalized plant names to image filenames
 const imageMap: Record<string, string> = {
   'epipremnum_aureum': 'epipremnum_aureum.jpg', 
-  'coffea_arabica': 'coffea_arabica.jpg',
   'philodendron_hedaracium_brasil': 'philodendron_brasil.jpg',
   'philodendron_scandens_micans': 'philodendron_micans.jpg',
   'scindapsus_treubii_moonlight': 'scindapsus_treubii_moonlight.jpg',
@@ -630,8 +629,9 @@ const imageMap: Record<string, string> = {
   'ficus_elastica_abidjan': 'ficus_abidjan.jpg',
   'calathea_ornata': 'calathea_ornata.jpg',
   'beaucarnea_recurvata': 'beaucarnea_recurvata.jpg',
-  'nephrolepis_obliterata': 'nephrolepis_obliterata.jpg',
   'peperomia_hope': 'peperomia_hope.jpg',
+  'epipremnum_pinnatum_blue': 'epipremnum_pinnatum_blue.jpg',
+  'sansevieria_laurentii': 'sansevieria_laurentii.jpg',
   'hoya_mathilde': 'hoya_mathilde.jpg'};
 
 function getImageSrc(plantName: string) {
