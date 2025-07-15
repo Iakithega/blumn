@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+dont execute command line commands yourself in the terminal. but instead give me the command and i will run the commnands myself

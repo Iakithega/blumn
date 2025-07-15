@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+we do use uv as python package manager in this project. witch uv.lock file and pyproject.toml. when we use apis we use fast-api
