@@ -1,5 +1,6 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
+4. **Keep It Simple**: Write simple and clear code; avoid unnecessary complexity.
