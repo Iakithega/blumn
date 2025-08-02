@@ -6,6 +6,19 @@ import os
 # Get database URL from environment variable
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+# Alternative: Build DATABASE_URL from individual components
+if not DATABASE_URL:
+    # Try to build from individual environment variables
+    DB_USER = os.environ.get("DB_USER")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD")
+    DB_HOST = os.environ.get("DB_HOST")
+    DB_PORT = os.environ.get("DB_PORT", "5432")  # Default PostgreSQL port
+    DB_NAME = os.environ.get("DB_NAME", "postgres")  # Default database name
+    
+    if all([DB_USER, DB_PASSWORD, DB_HOST]):
+        DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        print(f"Built DATABASE_URL from individual components: postgresql://{DB_USER}:****@{DB_HOST}:{DB_PORT}/{DB_NAME}")
+
 # Fix for Heroku PostgreSQL URL format (postgres:// -> postgresql://)
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
