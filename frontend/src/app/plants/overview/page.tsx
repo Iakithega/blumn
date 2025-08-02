@@ -890,14 +890,14 @@ export default function PlantOverview() {
         {/* Top section - Plant Info */}
         <Row gutter={[16, 16]} align="top">
           {/* Left column - Plant Image */}
-          <Col xs={24} sm={6} md={4} style={{ textAlign: 'center' }}>
+          <Col xs={24} sm={8} md={6} style={{ textAlign: 'center' }}>
             <img
               src={getImageSrc(plant.name)}
               alt={plant.name}
               style={{ 
                 width: '100%', 
-                maxWidth: 140, 
-                height: 140, 
+                maxWidth: 400, 
+                height: 320, 
                 objectFit: 'cover', 
                 borderRadius: 12,
                 marginBottom: 8,
@@ -907,7 +907,7 @@ export default function PlantOverview() {
           </Col>
           
           {/* Right column - Plant Info */}
-          <Col xs={24} sm={18} md={20}>
+          <Col xs={24} sm={16} md={18}>
             <div style={{ marginBottom: 16 }}>
               <Title level={4} style={{ marginBottom: 12, fontFamily: "'Quicksand', sans-serif", fontWeight: 600 }}>{plant.name}</Title>
               <Row gutter={24}>
