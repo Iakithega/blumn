@@ -213,3 +213,12 @@ SELECT * FROM care_activities WHERE care_type = 'water';
 ---
 
 **Note**: This strategy prioritizes simplicity and understanding. Each step will be explained in detail with clear SQL commands and Python code that can be understood and modified. 
+
+
+
+## LEARNING PLAN
+1. connection.py     → Database connection & session management
+2. models.py         → Table structure & relationships  
+3. create_tables_simple.py → Creating tables in practice
+4. migrate_excel_simple.py → Data migration (Excel → Database)
+5. verify_migration_simple.py → Querying & validation
