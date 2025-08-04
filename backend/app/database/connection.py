@@ -63,9 +63,8 @@ class DatabaseManager:
         # Create engine with connection pooling
         self.engine = create_engine(
             connection_string,
-            echo=False,  # Set to True for SQL query logging during development
+            echo=True,  # Set to True for SQL query logging during development
             pool_size=5,
-            max_overflow=0,
             pool_pre_ping=True,  # Validate connections before use
             pool_recycle=3600    # Recycle connections after 1 hour
         )
