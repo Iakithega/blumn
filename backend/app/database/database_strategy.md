@@ -23,6 +23,8 @@ Educational Step by Stap Migration from Excel-based plant care tracking to a Pos
 - name (VARCHAR(255) NOT NULL UNIQUE)
 - created_at (TIMESTAMP DEFAULT NOW())
 - updated_at (TIMESTAMP DEFAULT NOW())
+- plant_info (TEXT)
+- plant_condition VARCHAR(255)
 ```
 
 **Why this table?**
