@@ -3,4 +3,4 @@ description:
 globs: 
 alwaysApply: true
 ---
-4. **Keep It Simple**: avoid complexity and priritize simplicity first. Write simple and clear code; avoid unnecessary complexity.
+4. **Keep It Simple**: avoid complexity and priritize simplicity first. Write simple and clear code; avoid unnecessary complexity. Simplicity is rule number one.
