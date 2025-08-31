@@ -15,10 +15,10 @@ def get_db_config() -> dict:
     return db_config
 
 def validate(db_config: dict) -> None:
-    required = ("DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD")
-    missing = [k for k in required if not os.getenv(k)]
+    required_keys = ("host", "database", "username", "password")
+    missing = [k for k in required_keys if not db_config.get(k)]
     if missing:
-        raise RuntimeError(f"Missing environment variables: {', '.join(missing)}")
+        raise ValueError(f"Missing config values: {', '.join(missing)}")
 
 def build_url(db_config: dict) -> str:
     connection_string = (
