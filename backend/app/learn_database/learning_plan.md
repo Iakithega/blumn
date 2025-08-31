@@ -10,7 +10,7 @@ Goal: Replace Excel with a PostgreSQL-backed app, keeping an exact Excel export 
 
 ---
 
-## Step 01 — Connection (WE ARE HERE AT THE MOMENT)
+## Step 01 — Connection (WE SOLVED THAT)
 - Outcome: Verify connectivity and print DB info.
 - File: `simple_connection.py` 
 

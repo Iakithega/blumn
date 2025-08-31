@@ -5,7 +5,7 @@ Educational Step by Stap Migration from Excel-based plant care tracking to a Pos
 
 ## Current Situation
 - **Excel File**: `data/blumen_data.xlsx` contains daily plant care records
-- **Structure**: One row per plant per day with columns: date, plant name, days without water, water, fertilizer, wash, neemoil, pestmix, size
+- **Structure**: One row per plant per day with columns: date, plant name, days without water, water, fertilizer, wash, neemoil, pestmix
 - **Database**: PostgreSQL hosted on AWS (connection tested and working via `database/test_connection.py`)
 - **Database Status**: Empty database - no tables created yet  
 - **Current System**: Application reads directly from Excel file (`blumen_data.xlsx`)
