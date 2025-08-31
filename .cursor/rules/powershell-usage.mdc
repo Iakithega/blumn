@@ -3,4 +3,4 @@ description:
 globs: 
 alwaysApply: true
 ---
-i currently dont use bash but use powershell on windows laptop instead
+i currently use bash and sometimes powershell on windows laptop 
