@@ -632,6 +632,7 @@ const imageMap: Record<string, string> = {
   'monstera_adenossii': 'monstera_adansonii.jpg',
   'monstera_deliciosa_variegata': 'monstera_deliciosa_variegata.jpg',
   'monstera_deliciosa': 'monstera_deliciosa.jpg', 
+  'rhaphidophora_tetrasperma': 'rhaphidophora_tetrasperma.jpg',
   'pachira_aquatica': 'pachira_aquatica.jpg',
   'ficus_elastica_abidjan': 'ficus_abidjan.jpg',
   'calathea_ornata': 'calathea_ornata.jpg',
