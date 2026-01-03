@@ -622,6 +622,7 @@ const imageMap: Record<string, string> = {
   'epipremnum_aureum': 'epipremnum_aureum.jpg', 
   'philodendron_hedaracium_brasil': 'philodendron_brasil.jpg',
   'philodendron_scandens_micans': 'philodendron_micans.jpg',
+  'philodendron_scandens_micans_little': 'philodendron_micans_little.jpg',
   'philodendron_imperial_red': 'philodendron_imperial_red.jpg',
   'philodendron_mccolleys_finale': 'philodendron_mccolleys_finale.jpg',
   'philodendron_birkin': 'philodendron_birkin.jpg',  
