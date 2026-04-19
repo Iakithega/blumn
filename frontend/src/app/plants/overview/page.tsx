@@ -641,6 +641,9 @@ const imageMap: Record<string, string> = {
   'peperomia_hope': 'peperomia_hope.jpg',
   'epipremnum_pinnatum_blue': 'epipremnum_pinnatum_blue.jpg',
   'sansevieria_laurentii': 'sansevieria_laurentii.jpg',
+  'tradescantia_zebrina': 'tradescantia_zebrina.jpg',
+  'senecio_rowleyanus': 'senecio_rowleyanus.jpg',
+  'ledebouria_socialis': 'ledebouria_socialis.jpg',
   'hoya_mathilde': 'hoya_mathilde.jpg'};
 
 function getImageSrc(plantName: string) {
