@@ -639,6 +639,7 @@ const imageMap: Record<string, string> = {
   'calathea_ornata': 'calathea_ornata.jpg',
   'beaucarnea_recurvata': 'beaucarnea_recurvata.jpg',
   'peperomia_hope': 'peperomia_hope.jpg',
+  'peperomia_axillaris': 'peperomia_axillaris.jpg',
   'epipremnum_pinnatum_blue': 'epipremnum_pinnatum_blue.jpg',
   'sansevieria_laurentii': 'sansevieria_laurentii.jpg',
   'tradescantia_zebrina': 'tradescantia_zebrina.jpg',
