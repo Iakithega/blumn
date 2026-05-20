@@ -645,7 +645,7 @@ const imageMap: Record<string, string> = {
   'tradescantia_zebrina': 'tradescantia_zebrina.jpg',
   'senecio_rowleyanus': 'senecio_rowleyanus.jpg',
   'ledebouria_socialis': 'ledebouria_socialis.jpg',
-  'hoya_mathilde': 'hoya_mathilde.jpg'};
+  'hoya_sabah': 'hoya_sabah.jpg'};
 
 function getImageSrc(plantName: string) {
   const base = plantName
