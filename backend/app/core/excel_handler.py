@@ -8,6 +8,21 @@ from ..models.plant import Plant
 import os
 import time
 
+# Add plants here when they should keep their history but leave the active overview.
+RETIRED_PLANTS = {
+    "Hoya Mathilde",
+}
+
+
+def _normalize_plant_name(plant_name: str) -> str:
+    return " ".join(str(plant_name).strip().casefold().split())
+
+
+def is_retired_plant(plant_name: str) -> bool:
+    retired_plants = {_normalize_plant_name(name) for name in RETIRED_PLANTS}
+    return _normalize_plant_name(plant_name) in retired_plants
+
+
 class ExcelHandler:
     def __init__(self, file_path: str):
         self.file_path = Path(file_path)
@@ -63,7 +78,11 @@ class ExcelHandler:
         """Get unique plant names from the Excel file, preserving original order"""
         plant_names = []
         for row in ws.iter_rows(min_row=2, values_only=True):
-            if row[1] and row[1] not in plant_names:  # plant name column
+            if (
+                row[1]
+                and row[1] not in plant_names
+                and not is_retired_plant(row[1])
+            ):
                 plant_names.append(row[1])
         return plant_names
     
@@ -175,7 +194,11 @@ class ExcelHandler:
             plant_names = []
             for row in data:
                 plant_name = row.get("plant name")
-                if plant_name and plant_name not in plant_names:
+                if (
+                    plant_name
+                    and plant_name not in plant_names
+                    and not is_retired_plant(plant_name)
+                ):
                     plant_names.append(plant_name)
             
             for idx, plant_name in enumerate(plant_names, 1):
