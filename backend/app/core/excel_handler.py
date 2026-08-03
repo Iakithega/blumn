@@ -101,7 +101,13 @@ class ExcelHandler:
                 continue
                 
             try:
-                date = parse(row[0]).date() if isinstance(row[0], str) else row[0].date()
+                if isinstance(row[0], str):
+                    try:
+                        date = datetime.strptime(row[0], "%d.%m.%Y").date()
+                    except ValueError:
+                        date = parse(row[0], dayfirst=True).date()
+                else:
+                    date = row[0].date()
                 existing_dates.add(date)
                 
                 if date not in date_to_rows:
