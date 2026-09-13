@@ -645,7 +645,11 @@ const imageMap: Record<string, string> = {
   'tradescantia_zebrina': 'tradescantia_zebrina.jpg',
   'senecio_rowleyanus': 'senecio_rowleyanus.jpg',
   'ledebouria_socialis': 'ledebouria_socialis.jpg',
-  'hoya_sabah': 'hoya_sabah.jpg'};
+  'hoya_sabah': 'hoya_sabah.jpg',
+  'zamioculcas_zamiifolia_raven': 'zamioculcas_zamiifolia_raven.jpg',
+  'gasteria_dragon_skin': 'gasteria_dragon_skin.jpg',
+  'haworthia_limifolia_roux': 'haworthia_limifolia_roux.jpg',
+  'haworthia_cymbiformis': 'haworthia_cymbiformis.jpg'};
 
 function getImageSrc(plantName: string) {
   const base = plantName
@@ -902,6 +906,15 @@ export default function PlantOverview() {
             <img
               src={getImageSrc(plant.name)}
               alt={plant.name}
+              onError={(e) => {
+                // Map-Eintrag vorhanden, Datei fehlt -> auf das Standardbild
+                // zurueckfallen. Die Guard verhindert eine Endlosschleife,
+                // falls default.jpg selbst mal fehlt.
+                const img = e.currentTarget;
+                if (!img.src.endsWith('/plant_images/default.jpg')) {
+                  img.src = '/plant_images/default.jpg';
+                }
+              }}
               style={{ 
                 width: '100%', 
                 maxWidth: 400, 

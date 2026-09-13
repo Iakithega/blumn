@@ -11,6 +11,7 @@ import time
 # Add plants here when they should keep their history but leave the active overview.
 RETIRED_PLANTS = {
     "Hoya Mathilde",
+    "Sansevieria Laurentii",
 }
 
 
